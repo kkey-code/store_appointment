@@ -1,0 +1,30 @@
+sky:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    host: localhost
+    port: 3306
+    database: store_appointment
+    username: root
+    password: 12345678
+  jwt:
+    admin-secret-key: itcast
+    admin-ttl: 7200000
+    admin-token-name: token
+    user-secret-key: itheima
+    user-ttl: 7200000
+    user-token-name: authentication
+  alioss:
+    endpoint: oss-cn-beijing.aliyuncs.com
+    access-key-id:
+    access-key-secret:
+    bucket-name:
+  wechat:
+    appid:
+    secret:
+    mchid:
+    mch-serial-no:
+    private-key-file-path:
+    api-v3-key:
+    we-chat-pay-cert-file-path:
+    notify-url:
+    refund-notify-url:

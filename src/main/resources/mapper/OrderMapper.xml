@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.wkr.store_appointment.mapper.OrderMapper">
+
+    <sql id="OrderVoColumns">
+        oi.id,
+        oi.order_no as orderNo,
+        oi.appointment_id as appointmentId,
+        oi.customer_id as customerId,
+        c.name as customerName,
+        oi.service_item_id as serviceItemId,
+        si.name as serviceItemName,
+        oi.card_type as cardType,
+        oi.original_amount as originalAmount,
+        oi.discount_amount as discountAmount,
+        oi.amount,
+        oi.paid_amount as paidAmount,
+        oi.debt_amount as debtAmount,
+        oi.monthly_payment as monthlyPayment,
+        oi.payment_method as paymentMethod,
+        oi.debt_status as debtStatus,
+        oi.pay_status as payStatus,
+        oi.order_status as orderStatus,
+        oi.pay_time as payTime,
+        oi.create_time as createTime
+    </sql>
+
+    <select id="page" resultType="com.wkr.store_appointment.pojo.vo.OrderVO">
+        select
+        <include refid="OrderVoColumns"/>
+        from order_info oi
+        left join customer c on oi.customer_id = c.id
+        left join service_item si on oi.service_item_id = si.id
+        <where>
+            <if test="orderNo != null and orderNo != ''">
+                and oi.order_no like concat('%', #{orderNo}, '%')
+            </if>
+            <if test="customerName != null and customerName != ''">
+                and c.name like concat('%', #{customerName}, '%')
+            </if>
+            <if test="paymentMethod != null and paymentMethod != ''">
+                and oi.payment_method = #{paymentMethod}
+            </if>
+            <if test="payStatus != null">
+                and oi.pay_status = #{payStatus}
+            </if>
+            <if test="debtStatus != null">
+                and oi.debt_status = #{debtStatus}
+            </if>
+            <if test="orderStatus != null">
+                and oi.order_status = #{orderStatus}
+            </if>
+            <if test="beginTime != null">
+                and oi.create_time &gt;= #{beginTime}
+            </if>
+            <if test="endTime != null">
+                and oi.create_time &lt;= #{endTime}
+            </if>
+        </where>
+        order by oi.create_time desc
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into order_info
+        (order_no, appointment_id, customer_id, service_item_id, card_type, original_amount, discount_amount, amount,
+         paid_amount, debt_amount, monthly_payment, payment_method, debt_status, pay_status, order_status, pay_time,
+         remark, create_time, update_time)
+        values
+        (#{orderNo}, #{appointmentId}, #{customerId}, #{serviceItemId}, #{cardType}, #{originalAmount}, #{discountAmount},
+         #{amount}, #{paidAmount}, #{debtAmount}, #{monthlyPayment}, #{paymentMethod}, #{debtStatus}, #{payStatus},
+         #{orderStatus}, #{payTime}, #{remark}, #{createTime}, #{updateTime})
+    </insert>
+
+    <select id="getById" resultType="com.wkr.store_appointment.pojo.vo.OrderVO">
+        select
+        <include refid="OrderVoColumns"/>
+        from order_info oi
+        left join customer c on oi.customer_id = c.id
+        left join service_item si on oi.service_item_id = si.id
+        where oi.id = #{id}
+    </select>
+
+    <select id="getEntityById" resultType="com.wkr.store_appointment.pojo.entity.OrderInfo">
+        select
+        id,
+        order_no as orderNo,
+        appointment_id as appointmentId,
+        customer_id as customerId,
+        service_item_id as serviceItemId,
+        card_type as cardType,
+        original_amount as originalAmount,
+        discount_amount as discountAmount,
+        amount,
+        paid_amount as paidAmount,
+        debt_amount as debtAmount,
+        monthly_payment as monthlyPayment,
+        payment_method as paymentMethod,
+        debt_status as debtStatus,
+        pay_status as payStatus,
+        order_status as orderStatus,
+        pay_time as payTime,
+        remark,
+        create_time as createTime,
+        update_time as updateTime
+        from order_info
+        where id = #{id}
+    </select>
+
+    <update id="updatePayStatus">
+        update order_info
+        set pay_status = #{payStatus},
+            paid_amount = amount,
+            debt_amount = 0,
+            debt_status = #{debtStatus},
+            pay_time = #{payTime},
+            update_time = #{updateTime}
+        where id = #{id}
+    </update>
+
+    <update id="updatePayment">
+        update order_info
+        set paid_amount = #{paidAmount},
+            debt_amount = #{debtAmount},
+            monthly_payment = #{monthlyPayment},
+            payment_method = #{paymentMethod},
+            debt_status = #{debtStatus},
+            pay_status = #{payStatus},
+            pay_time = #{payTime},
+            update_time = #{updateTime}
+        where id = #{id}
+    </update>
+
+    <update id="updateOrderStatus">
+        update order_info
+        set order_status = #{orderStatus},
+            update_time = #{updateTime}
+        where id = #{id}
+    </update>
+</mapper>
