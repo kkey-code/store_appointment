@@ -12,6 +12,9 @@ import com.wkr.store_appointment.pojo.vo.AppointmentVO;
 import com.wkr.store_appointment.service.AppointmentService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -27,15 +30,26 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Autowired
     private AppointmentMapper appointmentMapper;
 
+    /**
+     * 分页查询
+     */
     @Override
+    @Cacheable(cacheNames = "appointment:page", key = "#p0", sync = true)
     public PageResult<AppointmentVO> page(AppointmentPageQueryDTO appointmentPageQueryDTO) {
 
         PageHelper.startPage(appointmentPageQueryDTO.getPage(), appointmentPageQueryDTO.getPageSize());
         Page<AppointmentVO> page = appointmentMapper.page(appointmentPageQueryDTO);
-        return new PageResult<>(page.getTotal(), page.getResult());
+        return new PageResult<>(page.getTotal(), new java.util.ArrayList<>(page.getResult()));
     }
 
+    /**
+     * 新增
+     */
     @Override
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "appointment:page", allEntries = true),
+            @CacheEvict(cacheNames = "statistics:overview", allEntries = true)
+    })
     public void save(AppointmentDTO appointmentDTO) {
 
         validate(appointmentDTO);
@@ -54,13 +68,25 @@ public class AppointmentServiceImpl implements AppointmentService {
         appointmentMapper.save(appointment);
     }
 
+    /**
+     * 根据id查询
+     */
     @Override
+    @Cacheable(cacheNames = "appointment:getById", key = "#p0", sync = true)
     public AppointmentVO getById(Long id) {
 
         return appointmentMapper.getById(id);
     }
 
+    /**
+     * 修改
+     */
     @Override
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "appointment:page", allEntries = true),
+            @CacheEvict(cacheNames = "appointment:getById", key = "#p0.id"),
+            @CacheEvict(cacheNames = "statistics:overview", allEntries = true)
+    })
     public void update(AppointmentDTO appointmentDTO) {
 
         validate(appointmentDTO);
@@ -75,7 +101,15 @@ public class AppointmentServiceImpl implements AppointmentService {
         appointmentMapper.update(appointment);
     }
 
+    /**
+     * 取消预约
+     */
     @Override
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "appointment:page", allEntries = true),
+            @CacheEvict(cacheNames = "appointment:getById", key = "#p0"),
+            @CacheEvict(cacheNames = "statistics:overview", allEntries = true)
+    })
     public void cancel(Long id) {
 
         Appointment appointment = getAppointment(id);
@@ -86,7 +120,15 @@ public class AppointmentServiceImpl implements AppointmentService {
         appointmentMapper.updateStatus(id, STATUS_CANCELED, LocalDateTime.now());
     }
 
+    /**
+     * 完成预约
+     */
     @Override
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "appointment:page", allEntries = true),
+            @CacheEvict(cacheNames = "appointment:getById", key = "#p0"),
+            @CacheEvict(cacheNames = "statistics:overview", allEntries = true)
+    })
     public void complete(Long id) {
 
         Appointment appointment = getAppointment(id);

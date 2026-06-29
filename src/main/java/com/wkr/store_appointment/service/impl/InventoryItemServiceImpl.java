@@ -12,6 +12,9 @@ import com.wkr.store_appointment.pojo.vo.InventoryItemVO;
 import com.wkr.store_appointment.service.InventoryItemService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -23,15 +26,23 @@ public class InventoryItemServiceImpl implements InventoryItemService {
     @Autowired
     private InventoryItemMapper inventoryItemMapper;
 
+    /**
+     * 分页查询
+     */
     @Override
+    @Cacheable(cacheNames = "inventoryItem:page", key = "#p0", sync = true)
     public PageResult<InventoryItemVO> page(InventoryItemPageQueryDTO inventoryItemPageQueryDTO) {
 
         PageHelper.startPage(inventoryItemPageQueryDTO.getPage(), inventoryItemPageQueryDTO.getPageSize());
         Page<InventoryItemVO> page = inventoryItemMapper.page(inventoryItemPageQueryDTO);
-        return new PageResult<>(page.getTotal(), page.getResult());
+        return new PageResult<>(page.getTotal(), new java.util.ArrayList<>(page.getResult()));
     }
 
+    /**
+     * 新增
+     */
     @Override
+    @CacheEvict(cacheNames = "inventoryItem:page", allEntries = true)
     public void save(InventoryItemDTO inventoryItemDTO) {
 
         validate(inventoryItemDTO);
@@ -45,13 +56,24 @@ public class InventoryItemServiceImpl implements InventoryItemService {
         inventoryItemMapper.save(inventoryItem);
     }
 
+    /**
+     * 根据id查询
+     */
     @Override
+    @Cacheable(cacheNames = "inventoryItem:detail", key = "#p0", sync = true)
     public InventoryItemVO getById(Long id) {
 
         return inventoryItemMapper.getById(id);
     }
 
+    /**
+     * 修改
+     */
     @Override
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "inventoryItem:page", allEntries = true),
+            @CacheEvict(cacheNames = "inventoryItem:detail", key = "#p0.id")
+    })
     public void update(InventoryItemDTO inventoryItemDTO) {
 
         validate(inventoryItemDTO);
@@ -64,7 +86,14 @@ public class InventoryItemServiceImpl implements InventoryItemService {
         inventoryItemMapper.update(inventoryItem);
     }
 
+    /**
+     * 删除
+     */
     @Override
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "inventoryItem:page", allEntries = true),
+            @CacheEvict(cacheNames = "inventoryItem:detail", key = "#p0")
+    })
     public void delete(Long id) {
 
         inventoryItemMapper.delete(id);

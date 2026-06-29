@@ -1,42 +1,53 @@
 server:
-  port: 8080
+  port: ${STORE_PORT:8080}
 
 spring:
   application:
     name: store_appointment
-  profiles:
-    active: dev
+  cache:
+    type: redis
   datasource:
-    driver-class-name: ${sky.datasource.driver-class-name}
-    url: jdbc:mysql://${sky.datasource.host}:${sky.datasource.port}/${sky.datasource.database}?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
-    username: ${sky.datasource.username}
-    password: ${sky.datasource.password}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${STORE_DB_HOST:localhost}:${STORE_DB_PORT:3306}/${STORE_DB_DATABASE:store_appointment}?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: ${STORE_DB_USERNAME:root}
+    password: ${STORE_DB_PASSWORD:12345678}
+  data:
+    redis:
+      host: ${STORE_REDIS_HOST:localhost}
+      port: ${STORE_REDIS_PORT:6379}
+      password: ${STORE_REDIS_PASSWORD:}
+      database: ${STORE_REDIS_DATABASE:0}
+      timeout: 3000ms
 
 mybatis:
   mapper-locations: classpath:mapper/*.xml
   configuration:
     map-underscore-to-camel-case: true
 
+store:
+  demo:
+    read-only: ${STORE_DEMO_READ_ONLY:false}
+
 sky:
   jwt:
-    admin-secret-key: ${sky.jwt.admin-secret-key}
-    admin-ttl: ${sky.jwt.admin-ttl}
-    admin-token-name: ${sky.jwt.admin-token-name}
-    user-secret-key: ${sky.jwt.user-secret-key}
-    user-ttl: ${sky.jwt.user-ttl}
-    user-token-name: ${sky.jwt.user-token-name}
+    admin-secret-key: ${STORE_JWT_ADMIN_SECRET_KEY:itcast}
+    admin-ttl: ${STORE_JWT_ADMIN_TTL:7200000}
+    admin-token-name: ${STORE_JWT_ADMIN_TOKEN_NAME:token}
+    user-secret-key: ${STORE_JWT_USER_SECRET_KEY:itheima}
+    user-ttl: ${STORE_JWT_USER_TTL:7200000}
+    user-token-name: ${STORE_JWT_USER_TOKEN_NAME:authentication}
   alioss:
-    endpoint: ${sky.alioss.endpoint}
-    access-key-id: ${sky.alioss.access-key-id}
-    access-key-secret: ${sky.alioss.access-key-secret}
-    bucket-name: ${sky.alioss.bucket-name}
+    endpoint: ${ALI_OSS_ENDPOINT:oss-cn-beijing.aliyuncs.com}
+    access-key-id: ${ALI_OSS_ACCESS_KEY_ID:}
+    access-key-secret: ${ALI_OSS_ACCESS_KEY_SECRET:}
+    bucket-name: ${ALI_OSS_BUCKET_NAME:}
   wechat:
-    appid: ${sky.wechat.appid}
-    secret: ${sky.wechat.secret}
-    mchid: ${sky.wechat.mchid}
-    mch-serial-no: ${sky.wechat.mch-serial-no}
-    private-key-file-path: ${sky.wechat.private-key-file-path}
-    api-v3-key: ${sky.wechat.api-v3-key}
-    we-chat-pay-cert-file-path: ${sky.wechat.we-chat-pay-cert-file-path}
-    notify-url: ${sky.wechat.notify-url}
-    refund-notify-url: ${sky.wechat.refund-notify-url}
+    appid: ${STORE_WECHAT_APPID:}
+    secret: ${STORE_WECHAT_SECRET:}
+    mchid: ${STORE_WECHAT_MCHID:}
+    mch-serial-no: ${STORE_WECHAT_MCH_SERIAL_NO:}
+    private-key-file-path: ${STORE_WECHAT_PRIVATE_KEY_FILE_PATH:}
+    api-v3-key: ${STORE_WECHAT_API_V3_KEY:}
+    we-chat-pay-cert-file-path: ${STORE_WECHAT_PAY_CERT_FILE_PATH:}
+    notify-url: ${STORE_WECHAT_NOTIFY_URL:}
+    refund-notify-url: ${STORE_WECHAT_REFUND_NOTIFY_URL:}

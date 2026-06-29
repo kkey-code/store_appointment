@@ -12,6 +12,9 @@ import com.wkr.store_appointment.pojo.vo.CustomerVO;
 import com.wkr.store_appointment.service.CustomerService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -22,15 +25,26 @@ public class CustomerServiceImpl implements CustomerService {
     @Autowired
     private CustomerMapper customerMapper;
 
+    /**
+     * 分页查询
+     */
     @Override
+    @Cacheable(cacheNames = "customer:page", key = "#p0", sync = true)
     public PageResult<CustomerVO> page(CustomerPageQueryDTO customerPageQueryDTO) {
 
         PageHelper.startPage(customerPageQueryDTO.getPage(), customerPageQueryDTO.getPageSize());
         Page<CustomerVO> page = customerMapper.page(customerPageQueryDTO);
-        return new PageResult<>(page.getTotal(), page.getResult());
+        return new PageResult<>(page.getTotal(), new java.util.ArrayList<>(page.getResult()));
     }
 
+    /**
+     * 新增
+     */
     @Override
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "customer:page", allEntries = true),
+            @CacheEvict(cacheNames = "statistics:overview", allEntries = true)
+    })
     public void save(CustomerDTO customerDTO) {
 
         checkPhoneUnique(customerDTO.getPhone(), null);
@@ -46,13 +60,24 @@ public class CustomerServiceImpl implements CustomerService {
         customerMapper.save(customer);
     }
 
+    /**
+     * 根据id查询
+     */
     @Override
+    @Cacheable(cacheNames = "customer:detail", key = "#p0", sync = true)
     public CustomerVO getById(Long id) {
 
         return customerMapper.getById(id);
     }
 
+    /**
+     * 修改
+     */
     @Override
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "customer:page", allEntries = true),
+            @CacheEvict(cacheNames = "customer:detail", key = "#p0.id")
+    })
     public void update(CustomerDTO customerDTO) {
 
         checkPhoneUnique(customerDTO.getPhone(), customerDTO.getId());
@@ -64,7 +89,15 @@ public class CustomerServiceImpl implements CustomerService {
         customerMapper.update(customer);
     }
 
+    /**
+     * 删除
+     */
     @Override
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "customer:page", allEntries = true),
+            @CacheEvict(cacheNames = "customer:detail", key = "#p0"),
+            @CacheEvict(cacheNames = "statistics:overview", allEntries = true)
+    })
     public void delete(Long id) {
 
         Integer appointmentCount = customerMapper.countAppointmentsByCustomerId(id);

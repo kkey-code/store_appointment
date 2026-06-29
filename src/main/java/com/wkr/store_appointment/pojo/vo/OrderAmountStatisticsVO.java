@@ -8,6 +8,6 @@ import java.util.List;
 @Data
 public class OrderAmountStatisticsVO {
 
-    private List<String> dateList;
-    private List<BigDecimal> amountList;
+    private List<String> dateList; //日期列表
+    private List<BigDecimal> amountList; //金额列表
 }

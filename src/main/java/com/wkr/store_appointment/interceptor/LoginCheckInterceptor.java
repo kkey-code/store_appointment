@@ -5,6 +5,7 @@ import com.wkr.store_appointment.common.JwtClaimsConstant;
 import com.wkr.store_appointment.properties.JwtProperties;
 import com.wkr.store_appointment.utils.JwtUtil;
 import io.jsonwebtoken.Claims;
+import io.swagger.annotations.Api;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;

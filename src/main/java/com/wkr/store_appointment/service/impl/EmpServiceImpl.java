@@ -15,6 +15,9 @@ import com.wkr.store_appointment.pojo.vo.EmployeeVO;
 import com.wkr.store_appointment.service.EmpService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -25,6 +28,9 @@ public class EmpServiceImpl implements EmpService {
     @Autowired
     private EmployeeMapper employeeMapper;
 
+    /**
+     * 登录
+     */
     @Override
     public User login(String username, String password) {
 
@@ -43,15 +49,23 @@ public class EmpServiceImpl implements EmpService {
         return user;
     }
 
+    /**
+     * 分页查询
+     */
     @Override
+    @Cacheable(cacheNames = "employee:list", key = "#p0", sync = true)
     public PageResult list(EmployeePageQueryDTO employeePageQuery) {
 
         PageHelper.startPage(employeePageQuery.getPage(), employeePageQuery.getPageSize());
         Page<EmployeeVO> page = employeeMapper.pageQuery(employeePageQuery);
-        return new PageResult(page.getTotal(), page.getResult());
+        return new PageResult(page.getTotal(), new java.util.ArrayList<>(page.getResult()));
     }
 
+    /**
+     * 新增员工
+     */
     @Override
+    @CacheEvict(cacheNames = "employee:list", allEntries = true)
     public void save(EmployeeDTO employeeDTO) {
 
         checkPhoneUnique(employeeDTO.getPhone(), null);
@@ -67,13 +81,27 @@ public class EmpServiceImpl implements EmpService {
         employeeMapper.save(employee);
     }
 
+    /**
+     * 禁用员工
+     */
     @Override
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "employee:list", allEntries = true),
+            @CacheEvict(cacheNames = "employee:detail", key = "#p0")
+    })
     public void delete(Long id) {
 
         employeeMapper.disable(id);
     }
 
+    /**
+     * 修改员工
+     */
     @Override
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "employee:list", allEntries = true),
+            @CacheEvict(cacheNames = "employee:detail", key = "#p0.id")
+    })
     public void update(EmployeeDTO employeeDTO) {
 
         checkPhoneUnique(employeeDTO.getPhone(), employeeDTO.getId());
@@ -85,7 +113,11 @@ public class EmpServiceImpl implements EmpService {
         employeeMapper.update(employee);
     }
 
+    /**
+     * 根据id查询员工
+     */
     @Override
+    @Cacheable(cacheNames = "employee:detail", key = "#p0", sync = true)
     public EmployeeVO getById(Long id) {
 
         return employeeMapper.getById(id);

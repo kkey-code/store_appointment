@@ -5,6 +5,7 @@ import com.wkr.store_appointment.pojo.vo.OrderAmountStatisticsVO;
 import com.wkr.store_appointment.pojo.vo.StatisticsOverviewVO;
 import com.wkr.store_appointment.service.StatisticsService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -23,6 +24,7 @@ public class StatisticsServiceImpl implements StatisticsService {
      * 统计数据
      */
     @Override
+    @Cacheable(cacheNames = "statistics:overview", key = "'data'", sync = true)
     public StatisticsOverviewVO overview() {
 
         LocalDate today = LocalDate.now();
@@ -41,6 +43,7 @@ public class StatisticsServiceImpl implements StatisticsService {
      * 营业额统计
      */
     @Override
+    @Cacheable(cacheNames = "statistics:orderAmount", key = "'data'", sync = true)
     public OrderAmountStatisticsVO orderAmount() {
 
         List<String> dateList = new ArrayList<>();
