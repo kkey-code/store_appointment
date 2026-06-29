@@ -1,33 +1,29 @@
-HELP.md
-target/
-.mvn/wrapper/maven-wrapper.jar
+# Java / Maven
+**/target/
 !**/src/main/**/target/
 !**/src/test/**/target/
+**/data/
+*.log
 
-### STS ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
+# Node / Vite
+**/node_modules/
+**/dist/
+**/.vite/
+*.tsbuildinfo
 
-### IntelliJ IDEA ###
-.idea
+# Generated delivery package
+delivery/
+
+# IDE
+.idea/
 *.iws
 *.iml
 *.ipr
-
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
-
-### VS Code ###
+.classpath
+.project
+.settings/
 .vscode/
+
+# OS
+.DS_Store
+Thumbs.db
