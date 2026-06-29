@@ -14,7 +14,6 @@ import org.apache.ibatis.annotations.Update;
 @Mapper
 public interface EmployeeMapper {
 
-    @Select("select * from user where username = #{username}")
     User login(String username);
 
     Page<EmployeeVO> pageQuery(EmployeePageQueryDTO employeePageQuery);

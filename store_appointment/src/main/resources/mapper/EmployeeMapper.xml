@@ -24,4 +24,7 @@
         </where>
         order by create_time desc
     </select>
+    <select id="login" resultType="com.wkr.store_appointment.pojo.entity.User">
+        select * from `user` where username = #{username}
+    </select>
 </mapper>
