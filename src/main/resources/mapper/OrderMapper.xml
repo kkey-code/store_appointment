@@ -106,6 +106,40 @@
         from order_info
         where id = #{id}
     </select>
+    <select id="listForExport" resultType="com.wkr.store_appointment.pojo.vo.OrderVO">
+        select
+        <include refid="OrderVoColumns"/>
+        from order_info oi
+        left join customer c on oi.customer_id = c.id
+        left join service_item si on oi.service_item_id = si.id
+        <where>
+            <if test="orderNo != null and orderNo != ''">
+                and oi.order_no like concat('%', #{orderNo}, '%')
+            </if>
+            <if test="customerName != null and customerName != ''">
+                and c.name like concat('%', #{customerName}, '%')
+            </if>
+            <if test="paymentMethod != null and paymentMethod != ''">
+                and oi.payment_method = #{paymentMethod}
+            </if>
+            <if test="payStatus != null">
+                and oi.pay_status = #{payStatus}
+            </if>
+            <if test="debtStatus != null">
+                and oi.debt_status = #{debtStatus}
+            </if>
+            <if test="orderStatus != null">
+                and oi.order_status = #{orderStatus}
+            </if>
+            <if test="beginTime != null">
+                and oi.create_time &gt;= #{beginTime}
+            </if>
+            <if test="endTime != null">
+                and oi.create_time &lt;= #{endTime}
+            </if>
+        </where>
+        order by oi.create_time desc
+    </select>
 
     <update id="updatePayStatus">
         update order_info

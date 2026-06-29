@@ -11,6 +11,8 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
+import java.util.List;
+
 @Mapper
 public interface CustomerMapper {
 
@@ -25,6 +27,8 @@ public interface CustomerMapper {
     CustomerVO getById(Long id);
 
     Page<CustomerVO> page(CustomerPageQueryDTO customerPageQueryDTO);
+
+    List<CustomerVO> listForExport(CustomerPageQueryDTO customerPageQueryDTO);
 
     @Update("update customer set name = #{name}, phone = #{phone}, gender = #{gender}, birthday = #{birthday}, level = #{level}, source = #{source}, remark = #{remark}, update_time = #{updateTime} where id = #{id}")
     void update(Customer customer);
