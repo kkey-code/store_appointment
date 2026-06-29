@@ -119,21 +119,6 @@ http://localhost:8080
 
 ### 方式二：便携 H2 模式
 
-便携模式不依赖 MySQL，适合演示和联调：
-
-```bash
-cd store_appointment
-mvn spring-boot:run -Dspring-boot.run.profiles=portable
-```
-
-也可以打包后运行：
-
-```bash
-cd store_appointment
-mvn -DskipTests package
-java -jar target/store_appointment-0.0.1-SNAPSHOT.jar --spring.profiles.active=portable
-```
-
 便携模式默认初始化账号：
 
 ```text
@@ -195,14 +180,6 @@ http://localhost:5174
 /admin -> http://localhost:8080
 ```
 
-所以联调顺序建议是：
-
-```text
-先启动 Redis
-再启动后端
-最后启动前端
-```
-
 ## Redis 缓存设计
 
 项目使用 Spring Cache 注解做缓存，不直接在业务代码里手写 Redis 读写逻辑。
@@ -212,38 +189,6 @@ http://localhost:5174
 ```text
 store_appointment/src/main/java/com/wkr/store_appointment/config/RedisConfig.java
 ```
-
-已经缓存的内容：
-
-```text
-statistics:overview       数据统计总览
-statistics:orderAmount    订单金额统计
-customer:page             客户分页
-customer:detail           客户详情
-employee:list             员工分页
-employee:detail           员工详情
-serviceItem:page          服务项目分页
-serviceItem:detail        服务项目详情
-inventoryItem:page        库存分页
-inventoryItem:detail      库存详情
-appointment:page          预约分页
-appointment:getById       预约详情
-order:page                订单分页
-order:getById             订单详情
-```
-
-缓存原则：
-
-- 统计类数据适合优先缓存，例如 `overview`、`orderAmount`。
-- 服务项目、员工、客户、库存列表这类低频变动数据可以缓存。
-- 新增、修改、删除、状态变更后要清理相关缓存。
-- 库存、订单、预约这类强一致业务不要把 Redis 当主数据源，数据库仍然是主数据源。
-- Redis 在这里主要做查询加速，不负责保存最终业务事实。
-
-分页缓存注意点：
-
-- PageHelper 的 `Page` 对象不要直接放进 Redis。
-- 业务返回前要转成普通 `ArrayList`，否则反序列化容易出问题。
 
 ## 常见问题
 
