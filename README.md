@@ -10,8 +10,7 @@ store_appointment/
 ├─ frontend/                          # 管理端前端
 ├─ frontend_customer_inventory/       # 客户档案 + 库存管理前端
 ├─ delivery/                          # 便携交付相关文件
-├─ README.md                          # 整个项目说明
-└─ 简历项目描述.md                    # 简历项目描述
+└─ README.md                          # 整个项目说明
 ```
 
 ## 技术栈
