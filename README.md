@@ -93,31 +93,6 @@ store_appointment/src/main/resources/application-portable.yml
 - `application.yml`：公共配置，包括端口、MySQL、Redis、JWT、OSS、微信等。
 - `application-portable.yml`：只放便携模式差异，主要是 H2 数据库和初始化 SQL。
 
-已经删除的旧配置：
-
-```text
-application-dev.yml
-application-demo.yml
-application-dev.yml.example
-```
-
-常用环境变量：
-
-```text
-STORE_PORT=8080
-STORE_DB_HOST=localhost
-STORE_DB_PORT=3306
-STORE_DB_DATABASE=store_appointment
-STORE_DB_USERNAME=root
-STORE_DB_PASSWORD=12345678
-STORE_REDIS_HOST=localhost
-STORE_REDIS_PORT=6379
-STORE_REDIS_PASSWORD=
-STORE_REDIS_DATABASE=0
-STORE_JWT_ADMIN_SECRET_KEY=itcast
-STORE_JWT_ADMIN_TTL=7200000
-STORE_JWT_ADMIN_TOKEN_NAME=token
-```
 
 ## 启动后端
 
@@ -270,45 +245,6 @@ order:getById             订单详情
 - PageHelper 的 `Page` 对象不要直接放进 Redis。
 - 业务返回前要转成普通 `ArrayList`，否则反序列化容易出问题。
 
-## 测试和构建
-
-后端测试：
-
-```bash
-cd store_appointment
-mvn test
-```
-
-后端打包：
-
-```bash
-cd store_appointment
-mvn -DskipTests package
-```
-
-管理端构建：
-
-```bash
-cd frontend
-npm run build
-```
-
-客户/库存端构建：
-
-```bash
-cd frontend_customer_inventory
-npm run build
-```
-
-最近一次联调验证结果：
-
-- 后端测试通过。
-- 管理端前端构建通过。
-- 客户/库存端前端构建通过。
-- 登录、统计、客户、员工、服务项目、库存、预约、订单接口流程通过。
-- 管理端页面联调正常：工作台、员工、客户、服务项目、预约、订单、统计。
-- 客户/库存端页面联调正常：客户档案、库存管理。
-
 ## 常见问题
 
 ### 前端页面请求失败
@@ -333,13 +269,6 @@ npm run dev -- --port 5174
 
 确认 Redis 已启动，并检查：
 
-```text
-STORE_REDIS_HOST
-STORE_REDIS_PORT
-STORE_REDIS_PASSWORD
-STORE_REDIS_DATABASE
-```
-
 本地默认配置是：
 
 ```text
@@ -361,36 +290,5 @@ STORE_DB_PASSWORD
 
 如果只是想快速跑项目，可以使用 `portable` 模式走 H2 数据库。
 
-### 构建提示 chunk 过大
 
-前端构建时 Vite 可能提示部分 chunk 超过 `500 kB`。这是构建体积提醒，不是构建失败。
 
-后续可以用路由懒加载、手动分包等方式优化。
-
-## 开发建议
-
-新增缓存时按这个顺序做：
-
-1. 先判断数据是否适合缓存。
-2. 查询方法加 `@Cacheable`。
-3. 新增、修改、删除方法加 `@CacheEvict` 或 `@Caching`。
-4. 分页结果不要缓存框架内部对象，返回普通集合。
-5. 启动后端和前端做一次真实联调。
-
-适合优先缓存：
-
-- 统计总览
-- 金额趋势
-- 服务项目列表
-- 员工列表
-- 客户分页
-- 库存分页
-
-不建议一开始用 Redis 做主数据源：
-
-- 库存扣减
-- 订单状态
-- 预约状态
-- 支付状态
-
-这些数据要以数据库为准，Redis 只做查询缓存。
