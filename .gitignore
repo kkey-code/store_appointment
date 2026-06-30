@@ -12,7 +12,9 @@
 *.tsbuildinfo
 
 # Generated delivery package
-delivery/
+delivery/*
+!delivery/
+!delivery/README.md
 
 # IDE
 .idea/
