@@ -6,7 +6,7 @@
 
 ## 项目说明
 
-本项目主要用于学习和展示 Spring Boot、MyBatis、JWT 登录认证、分页查询、权限拦截、Spring Cache、Redis 缓存、Excel 导出、前后端分离开发、数据库设计和本地便携部署流程。
+本项目主要用于学习和展示 Spring Boot、MyBatis-Plus、JWT 登录认证、分页查询、权限拦截、Spring Cache、Redis 缓存、Excel 导出、前后端分离开发、数据库设计和本地便携部署流程。
 
 项目业务场景参考线下门店管理需求，重点不是复杂算法，而是完成一个较完整的后台管理系统闭环。
 
@@ -53,8 +53,7 @@ https://github.com/kkey-code/store_appointment.git
 - Java 17
 - Spring Boot 3.5.16
 - Spring MVC
-- MyBatis
-- PageHelper
+- MyBatis-Plus
 - JWT
 - Spring Cache
 - Redis
@@ -188,7 +187,7 @@ store_appointment/
 store_appointment/src/main/java/com/wkr/store_appointment/
 ├─ controller/      # 接口控制层
 ├─ service/         # 业务逻辑层
-├─ mapper/          # MyBatis 数据访问层
+├─ mapper/          # MyBatis-Plus 数据访问层
 ├─ pojo/
 │  ├─ entity/       # 实体类
 │  ├─ DTO/          # 请求参数对象
@@ -286,8 +285,6 @@ POST /admin/appointment
   "customerId": 1,
   "employeeId": 1,
   "serviceItemId": 2,
-  "serviceItemCount": 1,
-  "serviceItemsText": "深度护理",
   "appointmentTime": "2026-06-30T14:00:00",
   "status": 0,
   "remark": "客户预约下午护理"
@@ -604,10 +601,10 @@ classpath:sql/portable_data.sql
 
 ## 项目亮点
 
-- 基于 Spring Boot + MyBatis 完成门店核心业务接口开发，覆盖员工、客户、服务项目、预约、订单、库存和统计模块；
+- 基于 Spring Boot + MyBatis-Plus 完成门店核心业务接口开发，覆盖员工、客户、服务项目、预约、订单、库存和统计模块；
 - 使用 JWT + 拦截器实现登录认证和接口访问控制；
 - 使用账号角色区分管理员和只读账号，限制只读账号执行新增、修改和删除操作；
-- 使用 PageHelper 实现后台列表分页查询，减少手写分页 SQL；
+- 使用 MyBatis-Plus 分页插件实现后台列表分页查询，减少手写分页 SQL；
 - 使用 Spring Cache + Redis 缓存高频查询接口，并在写操作后清理缓存；
 - 设计订单收款与欠款维护逻辑，支持原价、优惠、成交金额、已付、欠款、月付金额等字段；
 - 使用 EasyExcel 实现客户和订单 Excel 导出；

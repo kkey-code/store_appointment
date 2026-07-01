@@ -33,44 +33,34 @@
         left join customer c on oi.customer_id = c.id
         left join service_item si on oi.service_item_id = si.id
         <where>
-            <if test="orderNo != null and orderNo != ''">
-                and oi.order_no like concat('%', #{orderNo}, '%')
+            oi.deleted = 0
+            <if test="query.orderNo != null and query.orderNo != ''">
+                and oi.order_no like concat('%', #{query.orderNo}, '%')
             </if>
-            <if test="customerName != null and customerName != ''">
-                and c.name like concat('%', #{customerName}, '%')
+            <if test="query.customerName != null and query.customerName != ''">
+                and c.name like concat('%', #{query.customerName}, '%')
             </if>
-            <if test="paymentMethod != null and paymentMethod != ''">
-                and oi.payment_method = #{paymentMethod}
+            <if test="query.paymentMethod != null and query.paymentMethod != ''">
+                and oi.payment_method = #{query.paymentMethod}
             </if>
-            <if test="payStatus != null">
-                and oi.pay_status = #{payStatus}
+            <if test="query.payStatus != null">
+                and oi.pay_status = #{query.payStatus}
             </if>
-            <if test="debtStatus != null">
-                and oi.debt_status = #{debtStatus}
+            <if test="query.debtStatus != null">
+                and oi.debt_status = #{query.debtStatus}
             </if>
-            <if test="orderStatus != null">
-                and oi.order_status = #{orderStatus}
+            <if test="query.orderStatus != null">
+                and oi.order_status = #{query.orderStatus}
             </if>
-            <if test="beginTime != null">
-                and oi.create_time &gt;= #{beginTime}
+            <if test="query.beginTime != null">
+                and oi.create_time &gt;= #{query.beginTime}
             </if>
-            <if test="endTime != null">
-                and oi.create_time &lt;= #{endTime}
+            <if test="query.endTime != null">
+                and oi.create_time &lt;= #{query.endTime}
             </if>
         </where>
         order by oi.create_time desc
     </select>
-
-    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        insert into order_info
-        (order_no, appointment_id, customer_id, service_item_id, card_type, original_amount, discount_amount, amount,
-         paid_amount, debt_amount, monthly_payment, payment_method, debt_status, pay_status, order_status, pay_time,
-         remark, create_time, update_time)
-        values
-        (#{orderNo}, #{appointmentId}, #{customerId}, #{serviceItemId}, #{cardType}, #{originalAmount}, #{discountAmount},
-         #{amount}, #{paidAmount}, #{debtAmount}, #{monthlyPayment}, #{paymentMethod}, #{debtStatus}, #{payStatus},
-         #{orderStatus}, #{payTime}, #{remark}, #{createTime}, #{updateTime})
-    </insert>
 
     <select id="getById" resultType="com.wkr.store_appointment.pojo.vo.OrderVO">
         select
@@ -79,32 +69,7 @@
         left join customer c on oi.customer_id = c.id
         left join service_item si on oi.service_item_id = si.id
         where oi.id = #{id}
-    </select>
-
-    <select id="getEntityById" resultType="com.wkr.store_appointment.pojo.entity.OrderInfo">
-        select
-        id,
-        order_no as orderNo,
-        appointment_id as appointmentId,
-        customer_id as customerId,
-        service_item_id as serviceItemId,
-        card_type as cardType,
-        original_amount as originalAmount,
-        discount_amount as discountAmount,
-        amount,
-        paid_amount as paidAmount,
-        debt_amount as debtAmount,
-        monthly_payment as monthlyPayment,
-        payment_method as paymentMethod,
-        debt_status as debtStatus,
-        pay_status as payStatus,
-        order_status as orderStatus,
-        pay_time as payTime,
-        remark,
-        create_time as createTime,
-        update_time as updateTime
-        from order_info
-        where id = #{id}
+          and oi.deleted = 0
     </select>
     <select id="listForExport" resultType="com.wkr.store_appointment.pojo.vo.OrderVO">
         select
@@ -113,62 +78,32 @@
         left join customer c on oi.customer_id = c.id
         left join service_item si on oi.service_item_id = si.id
         <where>
-            <if test="orderNo != null and orderNo != ''">
-                and oi.order_no like concat('%', #{orderNo}, '%')
+            oi.deleted = 0
+            <if test="query.orderNo != null and query.orderNo != ''">
+                and oi.order_no like concat('%', #{query.orderNo}, '%')
             </if>
-            <if test="customerName != null and customerName != ''">
-                and c.name like concat('%', #{customerName}, '%')
+            <if test="query.customerName != null and query.customerName != ''">
+                and c.name like concat('%', #{query.customerName}, '%')
             </if>
-            <if test="paymentMethod != null and paymentMethod != ''">
-                and oi.payment_method = #{paymentMethod}
+            <if test="query.paymentMethod != null and query.paymentMethod != ''">
+                and oi.payment_method = #{query.paymentMethod}
             </if>
-            <if test="payStatus != null">
-                and oi.pay_status = #{payStatus}
+            <if test="query.payStatus != null">
+                and oi.pay_status = #{query.payStatus}
             </if>
-            <if test="debtStatus != null">
-                and oi.debt_status = #{debtStatus}
+            <if test="query.debtStatus != null">
+                and oi.debt_status = #{query.debtStatus}
             </if>
-            <if test="orderStatus != null">
-                and oi.order_status = #{orderStatus}
+            <if test="query.orderStatus != null">
+                and oi.order_status = #{query.orderStatus}
             </if>
-            <if test="beginTime != null">
-                and oi.create_time &gt;= #{beginTime}
+            <if test="query.beginTime != null">
+                and oi.create_time &gt;= #{query.beginTime}
             </if>
-            <if test="endTime != null">
-                and oi.create_time &lt;= #{endTime}
+            <if test="query.endTime != null">
+                and oi.create_time &lt;= #{query.endTime}
             </if>
         </where>
         order by oi.create_time desc
     </select>
-
-    <update id="updatePayStatus">
-        update order_info
-        set pay_status = #{payStatus},
-            paid_amount = amount,
-            debt_amount = 0,
-            debt_status = #{debtStatus},
-            pay_time = #{payTime},
-            update_time = #{updateTime}
-        where id = #{id}
-    </update>
-
-    <update id="updatePayment">
-        update order_info
-        set paid_amount = #{paidAmount},
-            debt_amount = #{debtAmount},
-            monthly_payment = #{monthlyPayment},
-            payment_method = #{paymentMethod},
-            debt_status = #{debtStatus},
-            pay_status = #{payStatus},
-            pay_time = #{payTime},
-            update_time = #{updateTime}
-        where id = #{id}
-    </update>
-
-    <update id="updateOrderStatus">
-        update order_info
-        set order_status = #{orderStatus},
-            update_time = #{updateTime}
-        where id = #{id}
-    </update>
 </mapper>

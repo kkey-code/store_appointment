@@ -17,8 +17,6 @@ public class AppointmentVO {
     private Long serviceItemId;
     private String serviceItemName;
     private BigDecimal serviceItemPrice;
-    private Integer serviceItemCount;
-    private String serviceItemsText;
     private LocalDateTime appointmentTime;
     private Integer status;
     private String remark;

@@ -31,7 +31,8 @@ create table if not exists customer (
     source varchar(50),
     remark varchar(255),
     create_time datetime,
-    update_time datetime
+    update_time datetime,
+    deleted tinyint not null default 0
 );
 
 create table if not exists service_item (
@@ -50,13 +51,12 @@ create table if not exists appointment (
     customer_id bigint,
     employee_id bigint,
     service_item_id bigint,
-    service_item_count int default 1,
-    service_items_text varchar(500),
     appointment_time datetime,
     status tinyint not null default 0,
     remark varchar(255),
     create_time datetime,
-    update_time datetime
+    update_time datetime,
+    deleted tinyint not null default 0
 );
 
 create table if not exists order_info (
@@ -79,7 +79,8 @@ create table if not exists order_info (
     pay_time datetime,
     remark varchar(255),
     create_time datetime,
-    update_time datetime
+    update_time datetime,
+    deleted tinyint not null default 0
 );
 
 create table if not exists inventory_item (
@@ -97,7 +98,14 @@ create table if not exists inventory_item (
     update_time datetime
 );
 
+alter table customer add column if not exists deleted tinyint not null default 0;
+alter table appointment add column if not exists deleted tinyint not null default 0;
+alter table order_info add column if not exists deleted tinyint not null default 0;
+
 create index if not exists idx_customer_name on customer(name);
 create index if not exists idx_customer_phone on customer(phone);
+create index if not exists idx_customer_deleted on customer(deleted);
+create index if not exists idx_appointment_deleted on appointment(deleted);
+create index if not exists idx_order_info_deleted on order_info(deleted);
 create index if not exists idx_inventory_name on inventory_item(name);
 create index if not exists idx_inventory_category on inventory_item(category);

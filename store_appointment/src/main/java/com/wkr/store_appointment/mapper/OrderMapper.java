@@ -1,46 +1,22 @@
 package com.wkr.store_appointment.mapper;
 
-import com.github.pagehelper.Page;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.wkr.store_appointment.pojo.DTO.OrderPageQueryDTO;
 import com.wkr.store_appointment.pojo.entity.OrderInfo;
 import com.wkr.store_appointment.pojo.vo.OrderVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Mapper
-public interface OrderMapper {
+public interface OrderMapper extends BaseMapper<OrderInfo> {
 
-    Page<OrderVO> page(OrderPageQueryDTO orderPageQueryDTO);
+    IPage<OrderVO> page(Page<OrderVO> page, @Param("query") OrderPageQueryDTO orderPageQueryDTO);
 
-    void insert(OrderInfo orderInfo);
+    OrderVO getById(@Param("id") Long id);
 
-    OrderVO getById(Long id);
-
-    OrderInfo getEntityById(Long id);
-
-    void updatePayStatus(@Param("id") Long id,
-                         @Param("payStatus") Integer payStatus,
-                         @Param("debtStatus") Integer debtStatus,
-                         @Param("payTime") LocalDateTime payTime,
-                         @Param("updateTime") LocalDateTime updateTime);
-
-    void updatePayment(@Param("id") Long id,
-                       @Param("paidAmount") java.math.BigDecimal paidAmount,
-                       @Param("debtAmount") java.math.BigDecimal debtAmount,
-                       @Param("monthlyPayment") java.math.BigDecimal monthlyPayment,
-                       @Param("paymentMethod") String paymentMethod,
-                       @Param("debtStatus") Integer debtStatus,
-                       @Param("payStatus") Integer payStatus,
-                       @Param("payTime") LocalDateTime payTime,
-                       @Param("updateTime") LocalDateTime updateTime);
-
-    void updateOrderStatus(@Param("id") Long id,
-                           @Param("orderStatus") Integer orderStatus,
-                           @Param("updateTime") LocalDateTime updateTime);
-
-
-    List<OrderVO> listForExport(OrderPageQueryDTO queryDTO);
+    List<OrderVO> listForExport(@Param("query") OrderPageQueryDTO queryDTO);
 }

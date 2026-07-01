@@ -1,8 +1,14 @@
 package com.wkr.store_appointment.service.impl;
 
-import com.github.pagehelper.Page;
-import com.github.pagehelper.PageHelper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.wkr.store_appointment.common.PageResult;
+import com.wkr.store_appointment.enums.CardTypeEnum;
+import com.wkr.store_appointment.enums.DebtStatusEnum;
+import com.wkr.store_appointment.enums.OrderStatusEnum;
+import com.wkr.store_appointment.enums.PayStatusEnum;
+import com.wkr.store_appointment.enums.PaymentMethodEnum;
 import com.wkr.store_appointment.exception.OrderBusinessException;
 import com.wkr.store_appointment.mapper.OrderMapper;
 import com.wkr.store_appointment.pojo.DTO.OrderDTO;
@@ -11,12 +17,13 @@ import com.wkr.store_appointment.pojo.DTO.OrderPaymentDTO;
 import com.wkr.store_appointment.pojo.entity.OrderInfo;
 import com.wkr.store_appointment.pojo.vo.OrderVO;
 import com.wkr.store_appointment.service.OrderService;
+import com.wkr.store_appointment.utils.PageQueryUtils;
 import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -24,35 +31,19 @@ import java.time.format.DateTimeFormatter;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Service
-public class OrderServiceImpl implements OrderService {
+public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderInfo> implements OrderService {
 
-    private static final int PAY_STATUS_UNPAID = 0; // 未支付
-    private static final int PAY_STATUS_PAID = 1; // 已支付
-    private static final int DEBT_STATUS_NONE = 0; // 无Debt
-    private static final int DEBT_STATUS_INSTALLMENT = 1; // 分期
-    private static final int DEBT_STATUS_SETTLED = 2; // 已结清
-    private static final int ORDER_STATUS_PENDING = 0; // 待处理
-    private static final int ORDER_STATUS_COMPLETED = 1; // 已完成
-    private static final int ORDER_STATUS_CANCELED = 2; // 已取消
-
-    @Autowired
-    private OrderMapper orderMapper;
-
-    /**
-     * 订单分页查询
-     */
     @Override
     @Cacheable(cacheNames = "order:page", key = "#p0", sync = true)
     public PageResult<OrderVO> page(OrderPageQueryDTO orderPageQueryDTO) {
 
-        PageHelper.startPage(orderPageQueryDTO.getPage(), orderPageQueryDTO.getPageSize());
-        Page<OrderVO> page = orderMapper.page(orderPageQueryDTO);
-        return new PageResult<>(page.getTotal(), new java.util.ArrayList<>(page.getResult()));
+        Page<OrderVO> page = new Page<>(
+                PageQueryUtils.page(orderPageQueryDTO.getPage()),
+                PageQueryUtils.pageSize(orderPageQueryDTO.getPageSize()));
+        IPage<OrderVO> result = baseMapper.page(page, orderPageQueryDTO);
+        return new PageResult<>(result.getTotal(), result.getRecords());
     }
 
-    /**
-     * 创建订单
-     */
     @Override
     @Caching(evict = {
             @CacheEvict(cacheNames = "order:page", allEntries = true),
@@ -67,41 +58,35 @@ public class OrderServiceImpl implements OrderService {
         BeanUtils.copyProperties(orderDTO, orderInfo);
         orderInfo.setOrderNo(generateOrderNo());
         normalizeAmount(orderInfo);
-        orderInfo.setPayStatus(isZero(orderInfo.getDebtAmount()) ? PAY_STATUS_PAID : PAY_STATUS_UNPAID);
-        orderInfo.setDebtStatus(isZero(orderInfo.getDebtAmount()) ? DEBT_STATUS_NONE : DEBT_STATUS_INSTALLMENT);
-        orderInfo.setOrderStatus(ORDER_STATUS_PENDING);
-        if (orderInfo.getPaymentMethod() == null || orderInfo.getPaymentMethod().isEmpty()) {
-            orderInfo.setPaymentMethod("现金");
+        orderInfo.setPayStatus(isZero(orderInfo.getDebtAmount()) ? PayStatusEnum.PAID.getCode() : PayStatusEnum.UNPAID.getCode());
+        orderInfo.setDebtStatus(isZero(orderInfo.getDebtAmount()) ? DebtStatusEnum.NONE.getCode() : DebtStatusEnum.INSTALLMENT.getCode());
+        orderInfo.setOrderStatus(OrderStatusEnum.PENDING.getCode());
+        if (!StringUtils.hasText(orderInfo.getPaymentMethod())) {
+            orderInfo.setPaymentMethod(PaymentMethodEnum.CASH.getLabel());
         }
-        if (orderInfo.getCardType() == null || orderInfo.getCardType().isEmpty()) {
-            orderInfo.setCardType("次卡");
+        if (!StringUtils.hasText(orderInfo.getCardType())) {
+            orderInfo.setCardType(CardTypeEnum.TIME_CARD.getLabel());
         }
-        if (statusEquals(orderInfo.getPayStatus(), PAY_STATUS_PAID)) {
+        if (PayStatusEnum.PAID.matches(orderInfo.getPayStatus())) {
             orderInfo.setPayTime(LocalDateTime.now());
         }
         orderInfo.setCreateTime(LocalDateTime.now());
         orderInfo.setUpdateTime(LocalDateTime.now());
 
-        orderMapper.insert(orderInfo);
+        baseMapper.insert(orderInfo);
     }
 
-    /**
-     * 获取订单详情
-     */
     @Override
     @Cacheable(cacheNames = "order:getById", key = "#p0", sync = true)
     public OrderVO getById(Long id) {
 
-        OrderVO orderVO = orderMapper.getById(id);
+        OrderVO orderVO = baseMapper.getById(id);
         if (orderVO == null) {
             throw new OrderBusinessException("订单不存在");
         }
         return orderVO;
     }
 
-    /**
-     * 支付订单
-     */
     @Override
     @Caching(evict = {
             @CacheEvict(cacheNames = "order:page", allEntries = true),
@@ -112,29 +97,33 @@ public class OrderServiceImpl implements OrderService {
     public void pay(Long id) {
 
         OrderInfo orderInfo = getOrderInfo(id);
-        if (!statusEquals(orderInfo.getPayStatus(), PAY_STATUS_UNPAID)) {
+        if (!PayStatusEnum.UNPAID.matches(orderInfo.getPayStatus())) {
             throw new OrderBusinessException("只有未支付订单可以支付");
         }
 
         LocalDateTime now = LocalDateTime.now();
-        Integer debtStatus = isPositive(orderInfo.getDebtAmount()) ? DEBT_STATUS_SETTLED : DEBT_STATUS_NONE;
-        orderMapper.updatePayStatus(id, PAY_STATUS_PAID, debtStatus, now, now);
+        OrderInfo update = new OrderInfo();
+        update.setId(id);
+        update.setPayStatus(PayStatusEnum.PAID.getCode());
+        update.setPaidAmount(valueOrZero(orderInfo.getAmount()));
+        update.setDebtAmount(BigDecimal.ZERO);
+        update.setDebtStatus(isPositive(orderInfo.getDebtAmount()) ? DebtStatusEnum.SETTLED.getCode() : DebtStatusEnum.NONE.getCode());
+        update.setPayTime(now);
+        update.setUpdateTime(now);
+        baseMapper.updateById(update);
     }
 
-    /**
-     * 修改订单收款信息
-     */
+    @Override
     @Caching(evict = {
             @CacheEvict(cacheNames = "order:page", allEntries = true),
             @CacheEvict(cacheNames = "order:getById", key = "#p0"),
             @CacheEvict(cacheNames = "statistics:overview", allEntries = true),
             @CacheEvict(cacheNames = "statistics:orderAmount", allEntries = true)
     })
-    @Override
     public void updatePayment(Long id, OrderPaymentDTO orderPaymentDTO) {
 
         OrderInfo orderInfo = getOrderInfo(id);
-        if (statusEquals(orderInfo.getOrderStatus(), ORDER_STATUS_CANCELED)) {
+        if (OrderStatusEnum.CANCELED.matches(orderInfo.getOrderStatus())) {
             throw new OrderBusinessException("已取消订单不能收款");
         }
 
@@ -150,45 +139,49 @@ public class OrderServiceImpl implements OrderService {
         }
 
         BigDecimal debtAmount = amount.subtract(paidAmount);
-        Integer payStatus = isZero(debtAmount) ? PAY_STATUS_PAID : PAY_STATUS_UNPAID;
+        Integer payStatus = isZero(debtAmount) ? PayStatusEnum.PAID.getCode() : PayStatusEnum.UNPAID.getCode();
         Integer debtStatus = resolveDebtStatus(debtAmount, isPositive(orderInfo.getDebtAmount()));
         LocalDateTime payTime = isZero(debtAmount) && isPositive(paidAmount) ? LocalDateTime.now() : orderInfo.getPayTime();
-        String paymentMethod = orderPaymentDTO.getPaymentMethod() == null || orderPaymentDTO.getPaymentMethod().isEmpty()
+        String paymentMethod = !StringUtils.hasText(orderPaymentDTO.getPaymentMethod())
                 ? orderInfo.getPaymentMethod()
                 : orderPaymentDTO.getPaymentMethod();
         BigDecimal monthlyPayment = orderPaymentDTO.getMonthlyPayment() == null
                 ? orderInfo.getMonthlyPayment()
                 : valueOrZero(orderPaymentDTO.getMonthlyPayment());
 
-        orderMapper.updatePayment(id, paidAmount, debtAmount, monthlyPayment, paymentMethod, debtStatus, payStatus, payTime, LocalDateTime.now());
+        OrderInfo update = new OrderInfo();
+        update.setId(id);
+        update.setPaidAmount(paidAmount);
+        update.setDebtAmount(debtAmount);
+        update.setMonthlyPayment(monthlyPayment);
+        update.setPaymentMethod(paymentMethod);
+        update.setDebtStatus(debtStatus);
+        update.setPayStatus(payStatus);
+        update.setPayTime(payTime);
+        update.setUpdateTime(LocalDateTime.now());
+        baseMapper.updateById(update);
     }
 
-    /**
-     * 完成订单
-     */
+    @Override
     @Caching(evict = {
             @CacheEvict(cacheNames = "order:page", allEntries = true),
             @CacheEvict(cacheNames = "order:getById", key = "#p0"),
             @CacheEvict(cacheNames = "statistics:overview", allEntries = true),
             @CacheEvict(cacheNames = "statistics:orderAmount", allEntries = true)
     })
-    @Override
     public void complete(Long id) {
 
         OrderInfo orderInfo = getOrderInfo(id);
-        if (!statusEquals(orderInfo.getPayStatus(), PAY_STATUS_PAID)) {
+        if (!PayStatusEnum.PAID.matches(orderInfo.getPayStatus())) {
             throw new OrderBusinessException("只有已支付订单可以完成");
         }
-        if (statusEquals(orderInfo.getOrderStatus(), ORDER_STATUS_CANCELED)) {
+        if (OrderStatusEnum.CANCELED.matches(orderInfo.getOrderStatus())) {
             throw new OrderBusinessException("已取消订单不能完成");
         }
 
-        orderMapper.updateOrderStatus(id, ORDER_STATUS_COMPLETED, LocalDateTime.now());
+        updateOrderStatus(id, OrderStatusEnum.COMPLETED);
     }
 
-    /**
-     * 取消订单
-     */
     @Override
     @Caching(evict = {
             @CacheEvict(cacheNames = "order:page", allEntries = true),
@@ -199,11 +192,11 @@ public class OrderServiceImpl implements OrderService {
     public void cancel(Long id) {
 
         OrderInfo orderInfo = getOrderInfo(id);
-        if (statusEquals(orderInfo.getOrderStatus(), ORDER_STATUS_COMPLETED)) {
+        if (OrderStatusEnum.COMPLETED.matches(orderInfo.getOrderStatus())) {
             throw new OrderBusinessException("已完成订单不能取消");
         }
 
-        orderMapper.updateOrderStatus(id, ORDER_STATUS_CANCELED, LocalDateTime.now());
+        updateOrderStatus(id, OrderStatusEnum.CANCELED);
     }
 
     private void validateOrder(OrderDTO orderDTO) {
@@ -233,17 +226,12 @@ public class OrderServiceImpl implements OrderService {
 
     private void normalizeAmount(OrderInfo orderInfo) {
 
-        // 计算原始金额
         BigDecimal originalAmount = orderInfo.getOriginalAmount() == null ? valueOrZero(orderInfo.getAmount()) : valueOrZero(orderInfo.getOriginalAmount());
-        // 计算折扣金额
         BigDecimal discountAmount = valueOrZero(orderInfo.getDiscountAmount());
-        // 计算实际金额 = 原始金额 - 折扣
         BigDecimal amount = orderInfo.getAmount() == null ? originalAmount.subtract(discountAmount) : valueOrZero(orderInfo.getAmount());
-        // 防止金额为负数
         if (amount.compareTo(BigDecimal.ZERO) < 0) {
             amount = BigDecimal.ZERO;
         }
-        // 已付金额不能大于总金额
         BigDecimal paidAmount = valueOrZero(orderInfo.getPaidAmount());
         if (paidAmount.compareTo(amount) > 0) {
             paidAmount = amount;
@@ -259,16 +247,22 @@ public class OrderServiceImpl implements OrderService {
 
     private OrderInfo getOrderInfo(Long id) {
 
-        OrderInfo orderInfo = orderMapper.getEntityById(id);
+        OrderInfo orderInfo = baseMapper.selectById(id);
         if (orderInfo == null) {
             throw new OrderBusinessException("订单不存在");
         }
         return orderInfo;
     }
 
-    /**
-     * 生成订单号
-     */
+    private void updateOrderStatus(Long id, OrderStatusEnum orderStatus) {
+
+        OrderInfo update = new OrderInfo();
+        update.setId(id);
+        update.setOrderStatus(orderStatus.getCode());
+        update.setUpdateTime(LocalDateTime.now());
+        baseMapper.updateById(update);
+    }
+
     private String generateOrderNo() {
 
         String time = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
@@ -276,25 +270,14 @@ public class OrderServiceImpl implements OrderService {
         return "ORD" + time + random;
     }
 
-    private boolean statusEquals(Integer status, int expected) {
-
-        return status != null && status == expected;
-    }
-
-    /**
-     * 解析还款状态
-     */
     private Integer resolveDebtStatus(BigDecimal debtAmount, boolean hadDebtBefore) {
 
         if (isPositive(debtAmount)) {
-            return DEBT_STATUS_INSTALLMENT;  // 分期中
+            return DebtStatusEnum.INSTALLMENT.getCode();
         }
-        return hadDebtBefore ? DEBT_STATUS_SETTLED : DEBT_STATUS_NONE;  // 已结清 / 无欠款
+        return hadDebtBefore ? DebtStatusEnum.SETTLED.getCode() : DebtStatusEnum.NONE.getCode();
     }
 
-    /**
-     * 避免 BigDecimal 空指针
-     */
     private BigDecimal valueOrZero(BigDecimal value) {
 
         return value == null ? BigDecimal.ZERO : value;

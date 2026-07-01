@@ -19,10 +19,22 @@ spring:
       database: ${STORE_REDIS_DATABASE:0}
       timeout: 3000ms
 
-mybatis:
+#mybatis:
+#  mapper-locations: classpath:mapper/*.xml
+#  configuration:
+#    map-underscore-to-camel-case: true
+
+mybatis-plus:
   mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.wkr.store_appointment.pojo.entity
   configuration:
     map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
 
 store:
   demo:

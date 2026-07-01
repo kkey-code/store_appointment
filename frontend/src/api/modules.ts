@@ -33,6 +33,21 @@ export interface ServiceItem {
   createTime?: string
 }
 
+export interface InventoryItem {
+  id?: number
+  name: string
+  category?: string
+  unit?: string
+  quantity?: number
+  safetyStock?: number
+  costPrice?: number
+  supplier?: string
+  status?: number
+  remark?: string
+  createTime?: string
+  updateTime?: string
+}
+
 export interface Appointment {
   id?: number
   customerId?: number
@@ -43,8 +58,6 @@ export interface Appointment {
   serviceItemId?: number
   serviceItemName?: string
   serviceItemPrice?: number
-  serviceItemCount?: number
-  serviceItemsText?: string
   appointmentTime?: string
   status?: number
   remark?: string
@@ -112,6 +125,13 @@ export const serviceItemApi = {
   save: (data: ServiceItem) => http.post('/admin/serviceItem', data),
   update: (data: ServiceItem) => http.put('/admin/serviceItem', data),
   remove: (id: number) => http.delete(`/admin/serviceItem/${id}`)
+}
+
+export const inventoryApi = {
+  page: (params: Record<string, unknown>) => http.get<PageResult<InventoryItem>>('/admin/inventory/page', { params }),
+  save: (data: InventoryItem) => http.post('/admin/inventory', data),
+  update: (data: InventoryItem) => http.put('/admin/inventory', data),
+  remove: (id: number) => http.delete(`/admin/inventory/${id}`)
 }
 
 export const appointmentApi = {

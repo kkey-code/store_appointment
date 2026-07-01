@@ -1,6 +1,14 @@
 package com.wkr.store_appointment.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.wkr.store_appointment.enums.PayStatusEnum;
+import com.wkr.store_appointment.mapper.AppointmentMapper;
+import com.wkr.store_appointment.mapper.CustomerMapper;
 import com.wkr.store_appointment.mapper.StatisticsMapper;
+import com.wkr.store_appointment.pojo.entity.Appointment;
+import com.wkr.store_appointment.pojo.entity.Customer;
+import com.wkr.store_appointment.pojo.entity.OrderInfo;
 import com.wkr.store_appointment.pojo.vo.OrderAmountStatisticsVO;
 import com.wkr.store_appointment.pojo.vo.StatisticsOverviewVO;
 import com.wkr.store_appointment.service.StatisticsService;
@@ -18,30 +26,36 @@ import java.util.List;
 public class StatisticsServiceImpl implements StatisticsService {
 
     @Autowired
+    private CustomerMapper customerMapper;
+
+    @Autowired
+    private AppointmentMapper appointmentMapper;
+
+    @Autowired
     private StatisticsMapper statisticsMapper;
 
-    /**
-     * 统计数据
-     */
     @Override
     @Cacheable(cacheNames = "statistics:overview", key = "'data'", sync = true)
     public StatisticsOverviewVO overview() {
 
         LocalDate today = LocalDate.now();
-        LocalDateTime beginTime = today.atStartOfDay(); // 今天开始时间
-        LocalDateTime endTime = today.plusDays(1).atStartOfDay(); // 明天开始时间
+        LocalDateTime beginTime = today.atStartOfDay();
+        LocalDateTime endTime = today.plusDays(1).atStartOfDay();
 
         StatisticsOverviewVO statisticsOverviewVO = new StatisticsOverviewVO();
-        statisticsOverviewVO.setCustomerCount(nullToZero(statisticsMapper.countCustomers())); // 客户数量
-        statisticsOverviewVO.setTodayAppointmentCount(nullToZero(statisticsMapper.countTodayAppointments(beginTime, endTime))); // 今天预约数量
-        statisticsOverviewVO.setTodayOrderCount(nullToZero(statisticsMapper.countTodayOrders(beginTime, endTime))); // 今天订单数量
-        statisticsOverviewVO.setTodayAmount(nullToZero(statisticsMapper.sumTodayAmount(beginTime, endTime))); // 今天金额
+        statisticsOverviewVO.setCustomerCount(customerMapper.selectCount(Wrappers.lambdaQuery(Customer.class)));
+        statisticsOverviewVO.setTodayAppointmentCount(appointmentMapper.selectCount(
+                Wrappers.lambdaQuery(Appointment.class)
+                        .ge(Appointment::getAppointmentTime, beginTime)
+                        .lt(Appointment::getAppointmentTime, endTime)));
+        statisticsOverviewVO.setTodayOrderCount(statisticsMapper.selectCount(
+                Wrappers.lambdaQuery(OrderInfo.class)
+                        .ge(OrderInfo::getCreateTime, beginTime)
+                        .lt(OrderInfo::getCreateTime, endTime)));
+        statisticsOverviewVO.setTodayAmount(sumPaidAmount(beginTime, endTime));
         return statisticsOverviewVO;
     }
 
-    /**
-     * 营业额统计
-     */
     @Override
     @Cacheable(cacheNames = "statistics:orderAmount", key = "'data'", sync = true)
     public OrderAmountStatisticsVO orderAmount() {
@@ -52,9 +66,8 @@ public class StatisticsServiceImpl implements StatisticsService {
         LocalDate beginDate = LocalDate.now().minusDays(6);
         for (int i = 0; i < 7; i++) {
             LocalDate date = beginDate.plusDays(i);
-            String dateText = date.toString();
-            dateList.add(dateText);
-            amountList.add(nullToZero(statisticsMapper.sumPaidAmountByDate(dateText)));
+            dateList.add(date.toString());
+            amountList.add(sumPaidAmount(date.atStartOfDay(), date.plusDays(1).atStartOfDay()));
         }
 
         OrderAmountStatisticsVO orderAmountStatisticsVO = new OrderAmountStatisticsVO();
@@ -63,13 +76,22 @@ public class StatisticsServiceImpl implements StatisticsService {
         return orderAmountStatisticsVO;
     }
 
-    private Long nullToZero(Long value) {
+    private BigDecimal sumPaidAmount(LocalDateTime beginTime, LocalDateTime endTime) {
 
-        return value == null ? 0L : value;
-    }
+        QueryWrapper<OrderInfo> queryWrapper = Wrappers.<OrderInfo>query()
+                .select("coalesce(sum(amount), 0)")
+                .eq("pay_status", PayStatusEnum.PAID.getCode())
+                .ge("create_time", beginTime)
+                .lt("create_time", endTime);
+        List<Object> values = statisticsMapper.selectObjs(queryWrapper);
+        if (values == null || values.isEmpty() || values.get(0) == null) {
+            return BigDecimal.ZERO;
+        }
 
-    private BigDecimal nullToZero(BigDecimal value) {
-
-        return value == null ? BigDecimal.ZERO : value;
+        Object value = values.get(0);
+        if (value instanceof BigDecimal) {
+            return (BigDecimal) value;
+        }
+        return new BigDecimal(value.toString());
     }
 }

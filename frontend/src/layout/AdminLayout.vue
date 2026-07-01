@@ -41,6 +41,7 @@ const menus = [
   { path: '/employees', title: '员工管理', icon: 'UserFilled' },
   { path: '/customers', title: '客户管理', icon: 'User' },
   { path: '/service-items', title: '服务项目', icon: 'Shop' },
+  { path: '/inventory', title: '库存管理', icon: 'Goods' },
   { path: '/appointments', title: '预约管理', icon: 'Calendar' },
   { path: '/orders', title: '订单管理', icon: 'Tickets' },
   { path: '/statistics', title: '数据统计', icon: 'TrendCharts' }

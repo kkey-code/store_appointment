@@ -11,8 +11,6 @@ public class AppointmentDTO {
     private Long customerId;
     private Long employeeId;
     private Long serviceItemId;
-    private Integer serviceItemCount;
-    private String serviceItemsText;
     private LocalDateTime appointmentTime;
     private Integer status;
     private String remark;

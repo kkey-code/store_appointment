@@ -21,6 +21,15 @@ where original_amount = 0;
 create index idx_order_info_payment_method on order_info (payment_method);
 create index idx_order_info_debt_status on order_info (debt_status);
 
+alter table customer
+    add column deleted tinyint not null default 0 comment '逻辑删除：0未删除，1已删除';
+
 alter table appointment
-    add column service_item_count int not null default 1 comment '项目数量：1到6个',
-    add column service_items_text varchar(255) null comment '本次预约项目明细';
+    add column deleted tinyint not null default 0 comment '逻辑删除：0未删除，1已删除';
+
+alter table order_info
+    add column deleted tinyint not null default 0 comment '逻辑删除：0未删除，1已删除';
+
+create index idx_customer_deleted on customer (deleted);
+create index idx_appointment_deleted on appointment (deleted);
+create index idx_order_info_deleted on order_info (deleted);

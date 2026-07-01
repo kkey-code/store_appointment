@@ -1,8 +1,10 @@
 package com.wkr.store_appointment.service.impl;
 
-import com.github.pagehelper.Page;
-import com.github.pagehelper.PageHelper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.wkr.store_appointment.common.PageResult;
+import com.wkr.store_appointment.enums.AppointmentStatusEnum;
 import com.wkr.store_appointment.exception.BaseException;
 import com.wkr.store_appointment.mapper.AppointmentMapper;
 import com.wkr.store_appointment.pojo.DTO.AppointmentDTO;
@@ -10,8 +12,8 @@ import com.wkr.store_appointment.pojo.DTO.AppointmentPageQueryDTO;
 import com.wkr.store_appointment.pojo.entity.Appointment;
 import com.wkr.store_appointment.pojo.vo.AppointmentVO;
 import com.wkr.store_appointment.service.AppointmentService;
+import com.wkr.store_appointment.utils.PageQueryUtils;
 import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
@@ -20,31 +22,19 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 
 @Service
-public class AppointmentServiceImpl implements AppointmentService {
+public class AppointmentServiceImpl extends ServiceImpl<AppointmentMapper, Appointment> implements AppointmentService {
 
-    private static final int STATUS_PENDING = 0;
-    private static final int STATUS_CONFIRMED = 1;
-    private static final int STATUS_COMPLETED = 2;
-    private static final int STATUS_CANCELED = 3;
-
-    @Autowired
-    private AppointmentMapper appointmentMapper;
-
-    /**
-     * 分页查询
-     */
     @Override
     @Cacheable(cacheNames = "appointment:page", key = "#p0", sync = true)
     public PageResult<AppointmentVO> page(AppointmentPageQueryDTO appointmentPageQueryDTO) {
 
-        PageHelper.startPage(appointmentPageQueryDTO.getPage(), appointmentPageQueryDTO.getPageSize());
-        Page<AppointmentVO> page = appointmentMapper.page(appointmentPageQueryDTO);
-        return new PageResult<>(page.getTotal(), new java.util.ArrayList<>(page.getResult()));
+        Page<AppointmentVO> page = new Page<>(
+                PageQueryUtils.page(appointmentPageQueryDTO.getPage()),
+                PageQueryUtils.pageSize(appointmentPageQueryDTO.getPageSize()));
+        IPage<AppointmentVO> result = baseMapper.page(page, appointmentPageQueryDTO);
+        return new PageResult<>(result.getTotal(), result.getRecords());
     }
 
-    /**
-     * 新增
-     */
     @Override
     @Caching(evict = {
             @CacheEvict(cacheNames = "appointment:page", allEntries = true),
@@ -56,31 +46,22 @@ public class AppointmentServiceImpl implements AppointmentService {
 
         Appointment appointment = new Appointment();
         BeanUtils.copyProperties(appointmentDTO, appointment);
-        if (appointment.getServiceItemCount() == null) {
-            appointment.setServiceItemCount(1);
-        }
         if (appointment.getStatus() == null) {
-            appointment.setStatus(STATUS_PENDING);
+            appointment.setStatus(AppointmentStatusEnum.PENDING.getCode());
         }
         appointment.setCreateTime(LocalDateTime.now());
         appointment.setUpdateTime(LocalDateTime.now());
 
-        appointmentMapper.save(appointment);
+        baseMapper.insert(appointment);
     }
 
-    /**
-     * 根据id查询
-     */
     @Override
     @Cacheable(cacheNames = "appointment:getById", key = "#p0", sync = true)
     public AppointmentVO getById(Long id) {
 
-        return appointmentMapper.getById(id);
+        return baseMapper.getById(id);
     }
 
-    /**
-     * 修改
-     */
     @Override
     @Caching(evict = {
             @CacheEvict(cacheNames = "appointment:page", allEntries = true),
@@ -93,17 +74,11 @@ public class AppointmentServiceImpl implements AppointmentService {
 
         Appointment appointment = new Appointment();
         BeanUtils.copyProperties(appointmentDTO, appointment);
-        if (appointment.getServiceItemCount() == null) {
-            appointment.setServiceItemCount(1);
-        }
         appointment.setUpdateTime(LocalDateTime.now());
 
-        appointmentMapper.update(appointment);
+        baseMapper.updateById(appointment);
     }
 
-    /**
-     * 取消预约
-     */
     @Override
     @Caching(evict = {
             @CacheEvict(cacheNames = "appointment:page", allEntries = true),
@@ -113,16 +88,13 @@ public class AppointmentServiceImpl implements AppointmentService {
     public void cancel(Long id) {
 
         Appointment appointment = getAppointment(id);
-        if (statusEquals(appointment.getStatus(), STATUS_COMPLETED)) {
+        if (AppointmentStatusEnum.COMPLETED.matches(appointment.getStatus())) {
             throw new BaseException("已完成的预约不能取消");
         }
 
-        appointmentMapper.updateStatus(id, STATUS_CANCELED, LocalDateTime.now());
+        updateStatus(id, AppointmentStatusEnum.CANCELED);
     }
 
-    /**
-     * 完成预约
-     */
     @Override
     @Caching(evict = {
             @CacheEvict(cacheNames = "appointment:page", allEntries = true),
@@ -132,25 +104,29 @@ public class AppointmentServiceImpl implements AppointmentService {
     public void complete(Long id) {
 
         Appointment appointment = getAppointment(id);
-        if (!statusEquals(appointment.getStatus(), STATUS_CONFIRMED)) {
+        if (!AppointmentStatusEnum.CONFIRMED.matches(appointment.getStatus())) {
             throw new BaseException("只有已确认预约可以完成");
         }
 
-        appointmentMapper.updateStatus(id, STATUS_COMPLETED, LocalDateTime.now());
+        updateStatus(id, AppointmentStatusEnum.COMPLETED);
     }
 
     private Appointment getAppointment(Long id) {
 
-        Appointment appointment = appointmentMapper.getEntityById(id);
+        Appointment appointment = baseMapper.selectById(id);
         if (appointment == null) {
             throw new BaseException("预约不存在");
         }
         return appointment;
     }
 
-    private boolean statusEquals(Integer status, int expected) {
+    private void updateStatus(Long id, AppointmentStatusEnum status) {
 
-        return status != null && status == expected;
+        Appointment appointment = new Appointment();
+        appointment.setId(id);
+        appointment.setStatus(status.getCode());
+        appointment.setUpdateTime(LocalDateTime.now());
+        baseMapper.updateById(appointment);
     }
 
     private void validate(AppointmentDTO appointmentDTO) {
@@ -166,10 +142,6 @@ public class AppointmentServiceImpl implements AppointmentService {
         }
         if (appointmentDTO.getAppointmentTime() == null) {
             throw new BaseException("预约时间不能为空");
-        }
-        Integer serviceItemCount = appointmentDTO.getServiceItemCount();
-        if (serviceItemCount != null && (serviceItemCount < 1 || serviceItemCount > 6)) {
-            throw new BaseException("一次预约的项目数量应为1到6个");
         }
     }
 }

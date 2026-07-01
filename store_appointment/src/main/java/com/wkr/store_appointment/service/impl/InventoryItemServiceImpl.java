@@ -1,8 +1,12 @@
 package com.wkr.store_appointment.service.impl;
 
-import com.github.pagehelper.Page;
-import com.github.pagehelper.PageHelper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.wkr.store_appointment.common.PageResult;
+import com.wkr.store_appointment.enums.CommonStatusEnum;
 import com.wkr.store_appointment.exception.BaseException;
 import com.wkr.store_appointment.mapper.InventoryItemMapper;
 import com.wkr.store_appointment.pojo.DTO.InventoryItemDTO;
@@ -10,37 +14,33 @@ import com.wkr.store_appointment.pojo.DTO.InventoryItemPageQueryDTO;
 import com.wkr.store_appointment.pojo.entity.InventoryItem;
 import com.wkr.store_appointment.pojo.vo.InventoryItemVO;
 import com.wkr.store_appointment.service.InventoryItemService;
+import com.wkr.store_appointment.utils.PageQueryUtils;
 import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
-public class InventoryItemServiceImpl implements InventoryItemService {
+public class InventoryItemServiceImpl extends ServiceImpl<InventoryItemMapper, InventoryItem> implements InventoryItemService {
 
-    @Autowired
-    private InventoryItemMapper inventoryItemMapper;
-
-    /**
-     * 分页查询
-     */
     @Override
     @Cacheable(cacheNames = "inventoryItem:page", key = "#p0", sync = true)
     public PageResult<InventoryItemVO> page(InventoryItemPageQueryDTO inventoryItemPageQueryDTO) {
 
-        PageHelper.startPage(inventoryItemPageQueryDTO.getPage(), inventoryItemPageQueryDTO.getPageSize());
-        Page<InventoryItemVO> page = inventoryItemMapper.page(inventoryItemPageQueryDTO);
-        return new PageResult<>(page.getTotal(), new java.util.ArrayList<>(page.getResult()));
+        Page<InventoryItem> page = new Page<>(
+                PageQueryUtils.page(inventoryItemPageQueryDTO.getPage()),
+                PageQueryUtils.pageSize(inventoryItemPageQueryDTO.getPageSize()));
+        IPage<InventoryItem> result = baseMapper.selectPage(page, inventoryQuery(inventoryItemPageQueryDTO));
+        List<InventoryItemVO> records = result.getRecords().stream().map(this::toVO).toList();
+        return new PageResult<>(result.getTotal(), records);
     }
 
-    /**
-     * 新增
-     */
     @Override
     @CacheEvict(cacheNames = "inventoryItem:page", allEntries = true)
     public void save(InventoryItemDTO inventoryItemDTO) {
@@ -53,22 +53,17 @@ public class InventoryItemServiceImpl implements InventoryItemService {
         inventoryItem.setCreateTime(LocalDateTime.now());
         inventoryItem.setUpdateTime(LocalDateTime.now());
 
-        inventoryItemMapper.save(inventoryItem);
+        baseMapper.insert(inventoryItem);
     }
 
-    /**
-     * 根据id查询
-     */
     @Override
     @Cacheable(cacheNames = "inventoryItem:detail", key = "#p0", sync = true)
     public InventoryItemVO getById(Long id) {
 
-        return inventoryItemMapper.getById(id);
+        InventoryItem inventoryItem = baseMapper.selectById(id);
+        return inventoryItem == null ? null : toVO(inventoryItem);
     }
 
-    /**
-     * 修改
-     */
     @Override
     @Caching(evict = {
             @CacheEvict(cacheNames = "inventoryItem:page", allEntries = true),
@@ -83,12 +78,9 @@ public class InventoryItemServiceImpl implements InventoryItemService {
         normalizeDefaults(inventoryItem);
         inventoryItem.setUpdateTime(LocalDateTime.now());
 
-        inventoryItemMapper.update(inventoryItem);
+        baseMapper.updateById(inventoryItem);
     }
 
-    /**
-     * 删除
-     */
     @Override
     @Caching(evict = {
             @CacheEvict(cacheNames = "inventoryItem:page", allEntries = true),
@@ -96,12 +88,22 @@ public class InventoryItemServiceImpl implements InventoryItemService {
     })
     public void delete(Long id) {
 
-        inventoryItemMapper.delete(id);
+        baseMapper.deleteById(id);
+    }
+
+    private LambdaQueryWrapper<InventoryItem> inventoryQuery(InventoryItemPageQueryDTO query) {
+
+        return Wrappers.lambdaQuery(InventoryItem.class)
+                .like(StringUtils.hasText(query.getName()), InventoryItem::getName, query.getName())
+                .eq(StringUtils.hasText(query.getCategory()), InventoryItem::getCategory, query.getCategory())
+                .eq(query.getStatus() != null, InventoryItem::getStatus, query.getStatus())
+                .orderByDesc(InventoryItem::getUpdateTime)
+                .orderByDesc(InventoryItem::getId);
     }
 
     private void validate(InventoryItemDTO inventoryItemDTO) {
 
-        if (inventoryItemDTO.getName() == null || inventoryItemDTO.getName().isEmpty()) {
+        if (!StringUtils.hasText(inventoryItemDTO.getName())) {
             throw new BaseException("库存名称不能为空");
         }
         if (inventoryItemDTO.getQuantity() != null && inventoryItemDTO.getQuantity().compareTo(BigDecimal.ZERO) < 0) {
@@ -118,7 +120,7 @@ public class InventoryItemServiceImpl implements InventoryItemService {
     private void normalizeDefaults(InventoryItem inventoryItem) {
 
         if (inventoryItem.getStatus() == null) {
-            inventoryItem.setStatus(1);
+            inventoryItem.setStatus(CommonStatusEnum.ENABLED.getCode());
         }
         if (inventoryItem.getQuantity() == null) {
             inventoryItem.setQuantity(BigDecimal.ZERO);
@@ -129,5 +131,12 @@ public class InventoryItemServiceImpl implements InventoryItemService {
         if (inventoryItem.getCostPrice() == null) {
             inventoryItem.setCostPrice(BigDecimal.ZERO);
         }
+    }
+
+    private InventoryItemVO toVO(InventoryItem inventoryItem) {
+
+        InventoryItemVO inventoryItemVO = new InventoryItemVO();
+        BeanUtils.copyProperties(inventoryItem, inventoryItemVO);
+        return inventoryItemVO;
     }
 }

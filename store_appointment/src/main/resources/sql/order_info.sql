@@ -19,6 +19,7 @@ create table if not exists order_info (
     remark varchar(255) null comment '备注',
     create_time datetime not null comment '创建时间',
     update_time datetime not null comment '更新时间',
+    deleted tinyint not null default 0 comment '逻辑删除：0未删除，1已删除',
     index idx_order_info_customer_id (customer_id),
     index idx_order_info_service_item_id (service_item_id),
     index idx_order_info_appointment_id (appointment_id),
@@ -26,5 +27,6 @@ create table if not exists order_info (
     index idx_order_info_payment_method (payment_method),
     index idx_order_info_debt_status (debt_status),
     index idx_order_info_pay_status (pay_status),
-    index idx_order_info_order_status (order_status)
+    index idx_order_info_order_status (order_status),
+    index idx_order_info_deleted (deleted)
 ) comment '订单表';

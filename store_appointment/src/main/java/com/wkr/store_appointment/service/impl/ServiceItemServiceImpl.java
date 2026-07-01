@@ -1,8 +1,12 @@
 package com.wkr.store_appointment.service.impl;
 
-import com.github.pagehelper.Page;
-import com.github.pagehelper.PageHelper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.wkr.store_appointment.common.PageResult;
+import com.wkr.store_appointment.enums.CommonStatusEnum;
 import com.wkr.store_appointment.exception.BaseException;
 import com.wkr.store_appointment.mapper.ServiceItemMapper;
 import com.wkr.store_appointment.pojo.DTO.ServiceItemDTO;
@@ -10,39 +14,39 @@ import com.wkr.store_appointment.pojo.DTO.ServiceItemPageQueryDTO;
 import com.wkr.store_appointment.pojo.entity.ServiceItem;
 import com.wkr.store_appointment.pojo.vo.ServiceItemVO;
 import com.wkr.store_appointment.service.ServiceItemService;
+import com.wkr.store_appointment.utils.PageQueryUtils;
 import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
-public class ServiceItemServiceImpl implements ServiceItemService {
+public class ServiceItemServiceImpl extends ServiceImpl<ServiceItemMapper, ServiceItem> implements ServiceItemService {
 
-    @Autowired
-    private ServiceItemMapper serviceItemMapper;
-
-    /**
-     * 分页查询
-     */
     @Override
     @Cacheable(cacheNames = "serviceItem:page", key = "#p0", sync = true)
     public PageResult<ServiceItemVO> serviceItem(ServiceItemPageQueryDTO serviceItemPageQueryDTO) {
 
-        PageHelper.startPage(serviceItemPageQueryDTO.getPage(), serviceItemPageQueryDTO.getPageSize());
-        Page<ServiceItemVO> page = serviceItemMapper.pageQuery(serviceItemPageQueryDTO);
-        return new PageResult<>(page.getTotal(), new java.util.ArrayList<>(page.getResult()));
+        Page<ServiceItem> page = new Page<>(
+                PageQueryUtils.page(serviceItemPageQueryDTO.getPage()),
+                PageQueryUtils.pageSize(serviceItemPageQueryDTO.getPageSize()));
+        IPage<ServiceItem> result = baseMapper.selectPage(page, serviceItemQuery(serviceItemPageQueryDTO));
+        List<ServiceItemVO> records = result.getRecords().stream().map(this::toVO).toList();
+        return new PageResult<>(result.getTotal(), records);
     }
 
-    /**
-     * 新增
-     */
     @Override
-    @CacheEvict(cacheNames = "serviceItem:page", allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "serviceItem:page", allEntries = true),
+            @CacheEvict(cacheNames = "appointment:page", allEntries = true),
+            @CacheEvict(cacheNames = "order:page", allEntries = true)
+    })
     public void save(ServiceItemDTO serviceItemDTO) {
 
         validate(serviceItemDTO);
@@ -50,31 +54,30 @@ public class ServiceItemServiceImpl implements ServiceItemService {
         ServiceItem serviceItem = new ServiceItem();
         BeanUtils.copyProperties(serviceItemDTO, serviceItem);
         if (serviceItem.getStatus() == null) {
-            serviceItem.setStatus(1);
+            serviceItem.setStatus(CommonStatusEnum.ENABLED.getCode());
         }
         serviceItem.setCreateTime(LocalDateTime.now());
         serviceItem.setUpdateTime(LocalDateTime.now());
 
-        serviceItemMapper.save(serviceItem);
+        baseMapper.insert(serviceItem);
     }
 
-    /**
-     * 根据id查询
-     */
     @Override
     @Cacheable(cacheNames = "serviceItem:detail", key = "#p0", sync = true)
     public ServiceItemVO getById(Long id) {
 
-        return serviceItemMapper.getById(id);
+        ServiceItem serviceItem = baseMapper.selectById(id);
+        return serviceItem == null ? null : toVO(serviceItem);
     }
 
-    /**
-     * 修改
-     */
     @Override
     @Caching(evict = {
             @CacheEvict(cacheNames = "serviceItem:page", allEntries = true),
-            @CacheEvict(cacheNames = "serviceItem:detail", key = "#p0.id")
+            @CacheEvict(cacheNames = "serviceItem:detail", key = "#p0.id"),
+            @CacheEvict(cacheNames = "appointment:page", allEntries = true),
+            @CacheEvict(cacheNames = "appointment:getById", allEntries = true),
+            @CacheEvict(cacheNames = "order:page", allEntries = true),
+            @CacheEvict(cacheNames = "order:getById", allEntries = true)
     })
     public void update(ServiceItemDTO serviceItemDTO) {
 
@@ -84,28 +87,38 @@ public class ServiceItemServiceImpl implements ServiceItemService {
         BeanUtils.copyProperties(serviceItemDTO, serviceItem);
         serviceItem.setUpdateTime(LocalDateTime.now());
 
-        serviceItemMapper.update(serviceItem);
+        baseMapper.updateById(serviceItem);
     }
 
-    /**
-     * 删除
-     */
     @Override
     @Caching(evict = {
             @CacheEvict(cacheNames = "serviceItem:page", allEntries = true),
-            @CacheEvict(cacheNames = "serviceItem:detail", key = "#p0")
+            @CacheEvict(cacheNames = "serviceItem:detail", key = "#p0"),
+            @CacheEvict(cacheNames = "appointment:page", allEntries = true),
+            @CacheEvict(cacheNames = "appointment:getById", allEntries = true),
+            @CacheEvict(cacheNames = "order:page", allEntries = true),
+            @CacheEvict(cacheNames = "order:getById", allEntries = true)
     })
     public void delete(Long id) {
 
-        serviceItemMapper.updateStatus(id, 0);
+        ServiceItem serviceItem = new ServiceItem();
+        serviceItem.setId(id);
+        serviceItem.setStatus(CommonStatusEnum.DISABLED.getCode());
+        serviceItem.setUpdateTime(LocalDateTime.now());
+        baseMapper.updateById(serviceItem);
     }
 
-    /**
-     * 校验
-     */
+    private LambdaQueryWrapper<ServiceItem> serviceItemQuery(ServiceItemPageQueryDTO query) {
+
+        return Wrappers.lambdaQuery(ServiceItem.class)
+                .like(StringUtils.hasText(query.getName()), ServiceItem::getName, query.getName())
+                .eq(query.getStatus() != null, ServiceItem::getStatus, query.getStatus())
+                .orderByDesc(ServiceItem::getCreateTime);
+    }
+
     private void validate(ServiceItemDTO serviceItemDTO) {
 
-        if (serviceItemDTO.getName() == null || serviceItemDTO.getName().isEmpty()) {
+        if (!StringUtils.hasText(serviceItemDTO.getName())) {
             throw new BaseException("服务项目名称不能为空");
         }
         if (serviceItemDTO.getPrice() != null && serviceItemDTO.getPrice().compareTo(BigDecimal.ZERO) < 0) {
@@ -114,5 +127,12 @@ public class ServiceItemServiceImpl implements ServiceItemService {
         if (serviceItemDTO.getDuration() != null && serviceItemDTO.getDuration() < 0) {
             throw new BaseException("服务时长不能小于0");
         }
+    }
+
+    private ServiceItemVO toVO(ServiceItem serviceItem) {
+
+        ServiceItemVO serviceItemVO = new ServiceItemVO();
+        BeanUtils.copyProperties(serviceItem, serviceItemVO);
+        return serviceItemVO;
     }
 }

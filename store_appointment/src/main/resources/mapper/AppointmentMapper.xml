@@ -13,8 +13,6 @@
         a.service_item_id as serviceItemId,
         si.name as serviceItemName,
         si.price as serviceItemPrice,
-        a.service_item_count as serviceItemCount,
-        a.service_items_text as serviceItemsText,
         a.appointment_time as appointmentTime,
         a.status,
         a.remark,
@@ -30,20 +28,21 @@
         left join employee e on a.employee_id = e.id
         left join service_item si on a.service_item_id = si.id
         <where>
-            <if test="customerName != null and customerName != ''">
-                and c.name like concat('%', #{customerName}, '%')
+            a.deleted = 0
+            <if test="query.customerName != null and query.customerName != ''">
+                and c.name like concat('%', #{query.customerName}, '%')
             </if>
-            <if test="employeeName != null and employeeName != ''">
-                and e.name like concat('%', #{employeeName}, '%')
+            <if test="query.employeeName != null and query.employeeName != ''">
+                and e.name like concat('%', #{query.employeeName}, '%')
             </if>
-            <if test="status != null">
-                and a.status = #{status}
+            <if test="query.status != null">
+                and a.status = #{query.status}
             </if>
-            <if test="beginTime != null">
-                and a.appointment_time &gt;= #{beginTime}
+            <if test="query.beginTime != null">
+                and a.appointment_time &gt;= #{query.beginTime}
             </if>
-            <if test="endTime != null">
-                and a.appointment_time &lt;= #{endTime}
+            <if test="query.endTime != null">
+                and a.appointment_time &lt;= #{query.endTime}
             </if>
         </where>
         order by a.create_time desc
@@ -57,22 +56,6 @@
         left join employee e on a.employee_id = e.id
         left join service_item si on a.service_item_id = si.id
         where a.id = #{id}
-    </select>
-
-    <select id="getEntityById" resultType="com.wkr.store_appointment.pojo.entity.Appointment">
-        select
-        id,
-        customer_id as customerId,
-        employee_id as employeeId,
-        service_item_id as serviceItemId,
-        service_item_count as serviceItemCount,
-        service_items_text as serviceItemsText,
-        appointment_time as appointmentTime,
-        status,
-        remark,
-        create_time as createTime,
-        update_time as updateTime
-        from appointment
-        where id = #{id}
+          and a.deleted = 0
     </select>
 </mapper>

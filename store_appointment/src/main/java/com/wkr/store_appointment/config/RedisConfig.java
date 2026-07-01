@@ -52,9 +52,24 @@ public class RedisConfig implements CachingConfigurer {
                 .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(jsonSerializer()));
 
-        Map<String, RedisCacheConfiguration> cacheConfigs = Map.of(
-                "statistics:overview", defaultConfig.entryTtl(Duration.ofMinutes(1)),
-                "statistics:orderAmount", defaultConfig.entryTtl(Duration.ofMinutes(5))
+        RedisCacheConfiguration detailConfig = defaultConfig.entryTtl(Duration.ofMinutes(10));
+        RedisCacheConfiguration statisticsFastConfig = defaultConfig.entryTtl(Duration.ofMinutes(1));
+
+        Map<String, RedisCacheConfiguration> cacheConfigs = Map.ofEntries(
+                Map.entry("employee:list", defaultConfig),
+                Map.entry("employee:detail", detailConfig),
+                Map.entry("customer:page", defaultConfig),
+                Map.entry("customer:detail", detailConfig),
+                Map.entry("serviceItem:page", defaultConfig),
+                Map.entry("serviceItem:detail", detailConfig),
+                Map.entry("inventoryItem:page", defaultConfig),
+                Map.entry("inventoryItem:detail", detailConfig),
+                Map.entry("appointment:page", defaultConfig),
+                Map.entry("appointment:getById", detailConfig),
+                Map.entry("order:page", defaultConfig),
+                Map.entry("order:getById", detailConfig),
+                Map.entry("statistics:overview", statisticsFastConfig),
+                Map.entry("statistics:orderAmount", defaultConfig)
         );
 
         return RedisCacheManager.builder(connectionFactory)

@@ -21,10 +21,6 @@
         <el-table-column prop="customerPhone" label="客户电话" min-width="140" />
         <el-table-column prop="employeeName" label="员工" min-width="120" />
         <el-table-column prop="serviceItemName" label="服务项目" min-width="150" />
-        <el-table-column prop="serviceItemCount" label="项目数量" width="100">
-          <template #default="{ row }">{{ row.serviceItemCount || 1 }} 个</template>
-        </el-table-column>
-        <el-table-column prop="serviceItemsText" label="项目明细" min-width="180" />
         <el-table-column prop="appointmentTime" label="预约时间" min-width="170" />
         <el-table-column prop="status" label="状态" width="110">
           <template #default="{ row }">
@@ -51,8 +47,6 @@
         <el-form-item label="客户ID"><el-input-number v-model="form.customerId" :min="1" /></el-form-item>
         <el-form-item label="员工ID"><el-input-number v-model="form.employeeId" :min="1" /></el-form-item>
         <el-form-item label="主项目ID"><el-input-number v-model="form.serviceItemId" :min="1" /></el-form-item>
-        <el-form-item label="项目数量"><el-input-number v-model="form.serviceItemCount" :min="1" :max="6" /></el-form-item>
-        <el-form-item label="项目明细"><el-input v-model="form.serviceItemsText" placeholder="如：基础护理、肩颈放松、补水" /></el-form-item>
         <el-form-item label="预约时间">
           <el-date-picker v-model="form.appointmentTime" type="datetime" value-format="YYYY-MM-DDTHH:mm:ss" />
         </el-form-item>
@@ -89,7 +83,7 @@ const dateRange = ref<[string, string] | undefined>()
 const list = ref<Appointment[]>([])
 const total = ref(0)
 const dialogVisible = ref(false)
-const form = reactive<Appointment>({ customerId: undefined, employeeId: undefined, serviceItemId: undefined, serviceItemCount: 1, serviceItemsText: '', appointmentTime: '', status: 0, remark: '' })
+const form = reactive<Appointment>({ customerId: undefined, employeeId: undefined, serviceItemId: undefined, appointmentTime: '', status: 0, remark: '' })
 
 const requestQuery = computed(() => ({
   ...query,
@@ -113,7 +107,7 @@ const reset = () => {
 }
 
 const openDialog = (row?: Appointment) => {
-  Object.assign(form, row || { id: undefined, customerId: undefined, employeeId: undefined, serviceItemId: undefined, serviceItemCount: 1, serviceItemsText: '', appointmentTime: '', status: 0, remark: '' })
+  Object.assign(form, row || { id: undefined, customerId: undefined, employeeId: undefined, serviceItemId: undefined, appointmentTime: '', status: 0, remark: '' })
   dialogVisible.value = true
 }
 

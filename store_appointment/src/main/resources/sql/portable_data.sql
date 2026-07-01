@@ -30,14 +30,14 @@ key(id) values
 (5, '全身放松', 298.00, 120, '全身放松理疗', 1, current_timestamp, current_timestamp),
 (6, '会员复查', 0.00, 30, '会员护理后复查', 1, current_timestamp, current_timestamp);
 
-merge into appointment (id, customer_id, employee_id, service_item_id, service_item_count, service_items_text, appointment_time, status, remark, create_time, update_time)
+merge into appointment (id, customer_id, employee_id, service_item_id, appointment_time, status, remark, create_time, update_time)
 key(id) values
-(1, 1, 2, 2, 1, '深度护理', dateadd('HOUR', 10, current_date), 1, '老客户今日到店护理', dateadd('DAY', -1, current_timestamp), current_timestamp),
-(2, 3, 2, 4, 1, '补水修护', dateadd('HOUR', 14, current_date), 0, '皮肤干燥，安排补水项目', current_timestamp, current_timestamp),
-(3, 4, 3, 3, 1, '肩颈放松', dateadd('HOUR', 16, current_date), 1, '下班后来店', current_timestamp, current_timestamp),
-(4, 5, 2, 1, 2, '基础护理 + 补水修护', dateadd('DAY', -1, dateadd('HOUR', 11, current_date)), 2, '已完成护理', dateadd('DAY', -2, current_timestamp), dateadd('DAY', -1, current_timestamp)),
-(5, 6, 4, 6, 1, '会员复查', dateadd('DAY', 1, dateadd('HOUR', 15, current_date)), 0, '新客复查提醒', current_timestamp, current_timestamp),
-(6, 7, 3, 5, 1, '全身放松', dateadd('DAY', 2, dateadd('HOUR', 19, current_date)), 0, '晚间预约', current_timestamp, current_timestamp);
+(1, 1, 2, 2, dateadd('HOUR', 10, current_date), 1, '老客户今日到店护理', dateadd('DAY', -1, current_timestamp), current_timestamp),
+(2, 3, 2, 4, dateadd('HOUR', 14, current_date), 0, '皮肤干燥，安排补水项目', current_timestamp, current_timestamp),
+(3, 4, 3, 3, dateadd('HOUR', 16, current_date), 1, '下班后来店', current_timestamp, current_timestamp),
+(4, 5, 2, 1, dateadd('DAY', -1, dateadd('HOUR', 11, current_date)), 2, '已完成护理', dateadd('DAY', -2, current_timestamp), dateadd('DAY', -1, current_timestamp)),
+(5, 6, 4, 6, dateadd('DAY', 1, dateadd('HOUR', 15, current_date)), 0, '新客复查提醒', current_timestamp, current_timestamp),
+(6, 7, 3, 5, dateadd('DAY', 2, dateadd('HOUR', 19, current_date)), 0, '晚间预约', current_timestamp, current_timestamp);
 
 merge into order_info (id, order_no, appointment_id, customer_id, service_item_id, card_type, original_amount, discount_amount, amount, paid_amount, debt_amount, monthly_payment, payment_method, debt_status, pay_status, order_status, pay_time, remark, create_time, update_time)
 key(id) values
