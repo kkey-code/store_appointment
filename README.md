@@ -92,12 +92,6 @@ store_appointment/
 - 预约、订单需要返回客户名、员工名、服务项目名等联表字段，因此保留 XML 查询。
 - `SchemaMigrationRunner` 会在启动时检查旧 MySQL 表结构，自动补 `deleted` 字段和索引，避免旧库升级后出现 `Unknown column 'deleted'`。
 
-详细升级记录见：
-
-```text
-docs/mybatis-plus-upgrade.md
-```
-
 ### 枚举化
 
 项目已将常用业务状态集中到 `store_appointment/src/main/java/com/wkr/store_appointment/enums/`：
