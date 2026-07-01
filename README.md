@@ -4,12 +4,6 @@
 
 当前后端持久层已升级为 MyBatis-Plus，单表流程使用 `BaseMapper` / `ServiceImpl` / `LambdaQueryWrapper`，预约和订单保留必要的联表 XML 查询，分页统一使用 MyBatis-Plus 分页插件。
 
-## 项目地址
-
-```text
-https://github.com/kkey-code/store_appointment.git
-```
-
 ## 技术栈
 
 ### 后端
