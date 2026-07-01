@@ -30,7 +30,7 @@
         </div>
         <div class="table-actions">
           <el-button :icon="Download" :loading="exporting" @click="handleExport">导出订单</el-button>
-          <el-button type="primary" :icon="Plus" @click="openDialog">新增订单</el-button>
+          <el-button type="primary" :icon="Plus" :disabled="isReadOnly" @click="openDialog">新增订单</el-button>
         </div>
       </div>
 
@@ -80,9 +80,9 @@
         <el-table-column label="操作" width="220" fixed="right">
           <template #default="{ row }">
             <div class="table-actions">
-              <el-button link type="primary" :disabled="row.orderStatus === 2" @click="openPayment(row)">收款</el-button>
-              <el-button link type="success" :disabled="row.payStatus !== 1 || row.orderStatus !== 0" @click="complete(row.id)">完成</el-button>
-              <el-button link type="danger" :disabled="row.orderStatus === 1 || row.orderStatus === 2" @click="cancel(row.id)">取消</el-button>
+              <el-button link type="primary" :disabled="isReadOnly || row.orderStatus === 2" @click="openPayment(row)">收款</el-button>
+              <el-button link type="success" :disabled="isReadOnly || row.payStatus !== 1 || row.orderStatus !== 0" @click="complete(row.id)">完成</el-button>
+              <el-button link type="danger" :disabled="isReadOnly || row.orderStatus === 1 || row.orderStatus === 2" @click="cancel(row.id)">取消</el-button>
             </div>
           </template>
         </el-table-column>
@@ -145,7 +145,7 @@
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submit">保存</el-button>
+        <el-button type="primary" :disabled="isReadOnly" @click="submit">保存</el-button>
       </template>
     </el-dialog>
 
@@ -163,7 +163,7 @@
       </el-form>
       <template #footer>
         <el-button @click="paymentVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitPayment">保存收款</el-button>
+        <el-button type="primary" :disabled="isReadOnly" @click="submitPayment">保存收款</el-button>
       </template>
     </el-dialog>
   </div>
@@ -174,6 +174,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Download, Plus, Refresh, Search } from '@element-plus/icons-vue'
 import { OrderInfo, orderApi } from '@/api/modules'
+import { isReadOnlyAdmin } from '@/utils/auth'
 
 const paymentMethods = ['微信', '支付宝', '现金', '次卡']
 
@@ -195,6 +196,7 @@ const total = ref(0)
 const exporting = ref(false)
 const dialogVisible = ref(false)
 const paymentVisible = ref(false)
+const isReadOnly = computed(isReadOnlyAdmin)
 const form = reactive<OrderInfo>({
   appointmentId: undefined,
   customerId: undefined,
@@ -232,6 +234,9 @@ const payStatus = (status?: number) => status === 1 ? '已支付' : status === 2
 const orderStatus = (status?: number) => status === 1 ? '已完成' : status === 2 ? '已取消' : '待服务'
 const debtStatus = (status?: number) => status === 1 ? '分期中' : status === 2 ? '已结清' : '无欠款'
 const debtTag = (status?: number) => status === 1 ? 'warning' : status === 2 ? 'success' : 'info'
+const warnReadOnly = () => {
+  ElMessage.warning('当前账号为只读账号，不能修改数据')
+}
 
 const load = async () => {
   const data = await orderApi.page(requestQuery.value)
@@ -257,6 +262,10 @@ const reset = () => {
 }
 
 const openDialog = () => {
+  if (isReadOnly.value) {
+    warnReadOnly()
+    return
+  }
   Object.assign(form, {
     appointmentId: undefined,
     customerId: undefined,
@@ -274,6 +283,10 @@ const openDialog = () => {
 }
 
 const openPayment = (row: OrderInfo) => {
+  if (isReadOnly.value) {
+    warnReadOnly()
+    return
+  }
   Object.assign(paymentForm, {
     id: row.id,
     amount: Number(row.amount || 0),
@@ -285,6 +298,10 @@ const openPayment = (row: OrderInfo) => {
 }
 
 const submit = async () => {
+  if (isReadOnly.value) {
+    warnReadOnly()
+    return
+  }
   await orderApi.save({
     ...form,
     amount: formReceivable.value
@@ -295,6 +312,10 @@ const submit = async () => {
 }
 
 const submitPayment = async () => {
+  if (isReadOnly.value) {
+    warnReadOnly()
+    return
+  }
   if (!paymentForm.id) return
   await orderApi.updatePayment(paymentForm.id, {
     paidAmount: paymentForm.paidAmount,
@@ -307,6 +328,10 @@ const submitPayment = async () => {
 }
 
 const complete = async (id?: number) => {
+  if (isReadOnly.value) {
+    warnReadOnly()
+    return
+  }
   if (!id) return
   await orderApi.complete(id)
   ElMessage.success('操作成功')
@@ -314,6 +339,10 @@ const complete = async (id?: number) => {
 }
 
 const cancel = async (id?: number) => {
+  if (isReadOnly.value) {
+    warnReadOnly()
+    return
+  }
   if (!id) return
   await ElMessageBox.confirm('确认取消该订单？', '提示', { type: 'warning' })
   await orderApi.cancel(id)

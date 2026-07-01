@@ -13,7 +13,7 @@
           <el-button type="primary" :icon="Search" @click="load">查询</el-button>
           <el-button :icon="Refresh" @click="reset">重置</el-button>
         </div>
-        <el-button type="primary" :icon="Plus" @click="openDialog()">新增员工</el-button>
+        <el-button type="primary" :icon="Plus" :disabled="isReadOnly" @click="openDialog()">新增员工</el-button>
       </div>
       <el-table :data="list" border stripe>
         <el-table-column prop="id" label="ID" width="80" />
@@ -32,11 +32,12 @@
         <el-table-column label="操作" width="190" fixed="right">
           <template #default="{ row }">
             <div class="table-actions">
-              <el-button link type="primary" @click="openDialog(row)">编辑</el-button>
+              <el-button link type="primary" :disabled="isReadOnly" @click="openDialog(row)">编辑</el-button>
               <el-button
                 link
                 :type="row.status === 1 ? 'danger' : 'success'"
                 :icon="row.status === 1 ? CircleClose : CircleCheck"
+                :disabled="isReadOnly"
                 @click="toggleStatus(row)"
               >
                 {{ row.status === 1 ? '禁用' : '启用' }}
@@ -67,23 +68,29 @@
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submit">保存</el-button>
+        <el-button type="primary" :disabled="isReadOnly" @click="submit">保存</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { CircleCheck, CircleClose, Plus, Refresh, Search } from '@element-plus/icons-vue'
 import { Employee, employeeApi } from '@/api/modules'
+import { isReadOnlyAdmin } from '@/utils/auth'
 
 const query = reactive({ page: 1, pageSize: 10, name: '', phone: '', status: undefined as number | undefined })
 const list = ref<Employee[]>([])
 const total = ref(0)
 const dialogVisible = ref(false)
 const form = reactive<Employee>({ name: '', phone: '', gender: 1, position: '', status: 1, remark: '' })
+const isReadOnly = computed(isReadOnlyAdmin)
+
+const warnReadOnly = () => {
+  ElMessage.warning('当前账号为只读账号，不能修改数据')
+}
 
 const load = async () => {
   const data = await employeeApi.page(query)
@@ -97,11 +104,19 @@ const reset = () => {
 }
 
 const openDialog = (row?: Employee) => {
+  if (isReadOnly.value) {
+    warnReadOnly()
+    return
+  }
   Object.assign(form, row || { id: undefined, name: '', phone: '', gender: 1, position: '', status: 1, remark: '' })
   dialogVisible.value = true
 }
 
 const submit = async () => {
+  if (isReadOnly.value) {
+    warnReadOnly()
+    return
+  }
   if (form.id) {
     await employeeApi.update(form)
   } else {
@@ -113,6 +128,10 @@ const submit = async () => {
 }
 
 const toggleStatus = async (row: Employee) => {
+  if (isReadOnly.value) {
+    warnReadOnly()
+    return
+  }
   if (!row.id) return
   const nextStatus = row.status === 1 ? 0 : 1
   const actionText = nextStatus === 1 ? '启用' : '禁用'

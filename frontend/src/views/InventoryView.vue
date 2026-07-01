@@ -13,7 +13,7 @@
           <el-button type="primary" :icon="Search" @click="load">查询</el-button>
           <el-button :icon="Refresh" @click="reset">重置</el-button>
         </div>
-        <el-button type="primary" :icon="Plus" @click="openDialog()">新增库存</el-button>
+        <el-button type="primary" :icon="Plus" :disabled="isReadOnly" @click="openDialog()">新增库存</el-button>
       </div>
 
       <el-table :data="list" border stripe>
@@ -44,8 +44,8 @@
         <el-table-column label="操作" width="160" fixed="right">
           <template #default="{ row }">
             <div class="table-actions">
-              <el-button link type="primary" @click="openDialog(row)">编辑</el-button>
-              <el-button link type="danger" @click="remove(row.id)">删除</el-button>
+              <el-button link type="primary" :disabled="isReadOnly" @click="openDialog(row)">编辑</el-button>
+              <el-button link type="danger" :disabled="isReadOnly" @click="remove(row.id)">删除</el-button>
             </div>
           </template>
         </el-table-column>
@@ -98,17 +98,18 @@
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submit">保存</el-button>
+        <el-button type="primary" :disabled="isReadOnly" @click="submit">保存</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Refresh, Search } from '@element-plus/icons-vue'
 import { InventoryItem, inventoryApi } from '@/api/modules'
+import { isReadOnlyAdmin } from '@/utils/auth'
 
 const query = reactive<{ page: number; pageSize: number; name: string; category: string; status?: number }>({
   page: 1,
@@ -120,6 +121,11 @@ const query = reactive<{ page: number; pageSize: number; name: string; category:
 const list = ref<InventoryItem[]>([])
 const total = ref(0)
 const dialogVisible = ref(false)
+const isReadOnly = computed(isReadOnlyAdmin)
+
+const warnReadOnly = () => {
+  ElMessage.warning('当前账号为只读账号，不能修改数据')
+}
 
 const emptyInventory = (): InventoryItem => ({
   id: undefined,
@@ -153,11 +159,19 @@ const handleSizeChange = () => {
 }
 
 const openDialog = (row?: InventoryItem) => {
+  if (isReadOnly.value) {
+    warnReadOnly()
+    return
+  }
   Object.assign(form, row || emptyInventory())
   dialogVisible.value = true
 }
 
 const submit = async () => {
+  if (isReadOnly.value) {
+    warnReadOnly()
+    return
+  }
   if (!form.name?.trim()) {
     ElMessage.warning('请输入物品名称')
     return
@@ -173,6 +187,10 @@ const submit = async () => {
 }
 
 const remove = async (id?: number) => {
+  if (isReadOnly.value) {
+    warnReadOnly()
+    return
+  }
   if (!id) return
   await ElMessageBox.confirm('确认删除该库存记录？', '提示', { type: 'warning' })
   await inventoryApi.remove(id)

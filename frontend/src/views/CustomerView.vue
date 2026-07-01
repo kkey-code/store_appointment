@@ -16,7 +16,7 @@
         </div>
         <div class="table-actions">
           <el-button :icon="Download" :loading="exporting" @click="handleExport">导出客户</el-button>
-          <el-button type="primary" :icon="Plus" @click="openDialog()">新增客户</el-button>
+          <el-button type="primary" :icon="Plus" :disabled="isReadOnly" @click="openDialog()">新增客户</el-button>
         </div>
       </div>
       <el-table :data="list" border stripe>
@@ -33,8 +33,8 @@
         <el-table-column label="操作" width="170" fixed="right">
           <template #default="{ row }">
             <div class="table-actions">
-              <el-button link type="primary" @click="openDialog(row)">编辑</el-button>
-              <el-button link type="danger" @click="remove(row.id)">删除</el-button>
+              <el-button link type="primary" :disabled="isReadOnly" @click="openDialog(row)">编辑</el-button>
+              <el-button link type="danger" :disabled="isReadOnly" @click="remove(row.id)">删除</el-button>
             </div>
           </template>
         </el-table-column>
@@ -74,17 +74,18 @@
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submit">保存</el-button>
+        <el-button type="primary" :disabled="isReadOnly" @click="submit">保存</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Download, Plus, Refresh, Search } from '@element-plus/icons-vue'
 import { Customer, customerApi } from '@/api/modules'
+import { isReadOnlyAdmin } from '@/utils/auth'
 
 const query = reactive({ page: 1, pageSize: 10, name: '', phone: '', level: '' })
 const list = ref<Customer[]>([])
@@ -92,6 +93,11 @@ const total = ref(0)
 const exporting = ref(false)
 const dialogVisible = ref(false)
 const form = reactive<Customer>({ name: '', phone: '', gender: 2, birthday: '', level: '普通', source: '老客', remark: '' })
+const isReadOnly = computed(isReadOnlyAdmin)
+
+const warnReadOnly = () => {
+  ElMessage.warning('当前账号为只读账号，不能修改数据')
+}
 
 const load = async () => {
   const data = await customerApi.page(query)
@@ -105,11 +111,19 @@ const reset = () => {
 }
 
 const openDialog = (row?: Customer) => {
+  if (isReadOnly.value) {
+    warnReadOnly()
+    return
+  }
   Object.assign(form, row || { id: undefined, name: '', phone: '', gender: 2, birthday: '', level: '普通', source: '老客', remark: '' })
   dialogVisible.value = true
 }
 
 const submit = async () => {
+  if (isReadOnly.value) {
+    warnReadOnly()
+    return
+  }
   if (form.id) {
     await customerApi.update(form)
   } else {
@@ -121,6 +135,10 @@ const submit = async () => {
 }
 
 const remove = async (id?: number) => {
+  if (isReadOnly.value) {
+    warnReadOnly()
+    return
+  }
   if (!id) return
   await ElMessageBox.confirm('确认删除该客户？有关联预约或订单时会被拦截。', '提示', { type: 'warning' })
   await customerApi.remove(id)

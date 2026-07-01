@@ -13,7 +13,7 @@
           <el-button type="primary" :icon="Search" @click="load">查询</el-button>
           <el-button :icon="Refresh" @click="reset">重置</el-button>
         </div>
-        <el-button type="primary" :icon="Plus" @click="openDialog()">新增预约</el-button>
+        <el-button type="primary" :icon="Plus" :disabled="isReadOnly" @click="openDialog()">新增预约</el-button>
       </div>
       <el-table :data="list" border stripe>
         <el-table-column prop="id" label="ID" width="80" />
@@ -31,9 +31,9 @@
         <el-table-column label="操作" width="220" fixed="right">
           <template #default="{ row }">
             <div class="table-actions">
-              <el-button link type="primary" @click="openDialog(row)">编辑</el-button>
-              <el-button link type="success" :disabled="row.status !== 1" @click="complete(row.id)">完成</el-button>
-              <el-button link type="danger" :disabled="row.status === 2 || row.status === 3" @click="cancel(row.id)">取消</el-button>
+              <el-button link type="primary" :disabled="isReadOnly" @click="openDialog(row)">编辑</el-button>
+              <el-button link type="success" :disabled="isReadOnly || row.status !== 1" @click="complete(row.id)">完成</el-button>
+              <el-button link type="danger" :disabled="isReadOnly || row.status === 2 || row.status === 3" @click="cancel(row.id)">取消</el-button>
             </div>
           </template>
         </el-table-column>
@@ -59,7 +59,7 @@
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submit">保存</el-button>
+        <el-button type="primary" :disabled="isReadOnly" @click="submit">保存</el-button>
       </template>
     </el-dialog>
   </div>
@@ -70,6 +70,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Refresh, Search } from '@element-plus/icons-vue'
 import { Appointment, appointmentApi } from '@/api/modules'
+import { isReadOnlyAdmin } from '@/utils/auth'
 
 const statusOptions = [
   { label: '待确认', value: 0 },
@@ -84,6 +85,11 @@ const list = ref<Appointment[]>([])
 const total = ref(0)
 const dialogVisible = ref(false)
 const form = reactive<Appointment>({ customerId: undefined, employeeId: undefined, serviceItemId: undefined, appointmentTime: '', status: 0, remark: '' })
+const isReadOnly = computed(isReadOnlyAdmin)
+
+const warnReadOnly = () => {
+  ElMessage.warning('当前账号为只读账号，不能修改数据')
+}
 
 const requestQuery = computed(() => ({
   ...query,
@@ -107,11 +113,19 @@ const reset = () => {
 }
 
 const openDialog = (row?: Appointment) => {
+  if (isReadOnly.value) {
+    warnReadOnly()
+    return
+  }
   Object.assign(form, row || { id: undefined, customerId: undefined, employeeId: undefined, serviceItemId: undefined, appointmentTime: '', status: 0, remark: '' })
   dialogVisible.value = true
 }
 
 const submit = async () => {
+  if (isReadOnly.value) {
+    warnReadOnly()
+    return
+  }
   if (form.id) {
     await appointmentApi.update(form)
   } else {
@@ -123,6 +137,10 @@ const submit = async () => {
 }
 
 const cancel = async (id?: number) => {
+  if (isReadOnly.value) {
+    warnReadOnly()
+    return
+  }
   if (!id) return
   await ElMessageBox.confirm('确认取消该预约？', '提示', { type: 'warning' })
   await appointmentApi.cancel(id)
@@ -131,6 +149,10 @@ const cancel = async (id?: number) => {
 }
 
 const complete = async (id?: number) => {
+  if (isReadOnly.value) {
+    warnReadOnly()
+    return
+  }
   if (!id) return
   await appointmentApi.complete(id)
   ElMessage.success('操作成功')

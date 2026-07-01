@@ -29,6 +29,7 @@ import { useRouter } from 'vue-router'
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage } from 'element-plus'
 import { login } from '@/api/modules'
+import { saveAdminSession } from '@/utils/auth'
 
 const router = useRouter()
 const formRef = ref<FormInstance>()
@@ -49,8 +50,7 @@ const submit = async () => {
   loading.value = true
   try {
     const user = await login(form.username, form.password)
-    localStorage.setItem('store_admin_token', user.token)
-    localStorage.setItem('store_admin_name', user.userName || user.username || form.username)
+    saveAdminSession(user, form.username)
     ElMessage.success('登录成功')
     router.replace('/dashboard')
   } finally {

@@ -258,6 +258,8 @@ http://localhost:5173
 /admin -> http://localhost:8080
 ```
 
+执行 `npm run build` 会把前端产物输出到后端 `store_appointment/src/main/resources/static`，用于后端 jar 直接托管最新管理端页面。
+
 ## 接口示例
 
 ### 登录
@@ -437,6 +439,12 @@ mvn test
 ```bash
 cd frontend
 npm run build
+```
+
+构建产物会同步到后端静态资源目录：
+
+```text
+store_appointment/src/main/resources/static
 ```
 
 ## 项目亮点

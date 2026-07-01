@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import AdminLayout from '@/layout/AdminLayout.vue'
+import { getAdminToken } from '@/utils/auth'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -28,7 +29,7 @@ const router = createRouter({
 })
 
 router.beforeEach((to) => {
-  const token = localStorage.getItem('store_admin_token')
+  const token = getAdminToken()
   if (!to.meta.public && !token) {
     return '/login'
   }

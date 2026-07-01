@@ -1,5 +1,6 @@
 import axios, { AxiosRequestConfig } from 'axios'
 import { ElMessage } from 'element-plus'
+import { getAdminToken } from '@/utils/auth'
 
 export interface ApiResult<T> {
   code: number
@@ -17,7 +18,7 @@ const service = axios.create({
 })
 
 service.interceptors.request.use((config) => {
-  const token = localStorage.getItem('store_admin_token')
+  const token = getAdminToken()
   if (token) {
     config.headers.token = token
   }

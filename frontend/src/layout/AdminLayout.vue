@@ -19,6 +19,7 @@
         <div class="crumb">{{ currentTitle }}</div>
         <div class="user">
           <span>{{ userName }}</span>
+          <el-tag v-if="isReadOnly" size="small" type="warning">只读</el-tag>
           <el-button text type="primary" @click="logout">退出</el-button>
         </div>
       </el-header>
@@ -32,6 +33,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { clearAdminSession, getAdminName, isReadOnlyAdmin } from '@/utils/auth'
 
 const route = useRoute()
 const router = useRouter()
@@ -48,11 +50,11 @@ const menus = [
 ]
 
 const currentTitle = computed(() => String(route.meta.title || '工作台'))
-const userName = computed(() => localStorage.getItem('store_admin_name') || '管理员')
+const userName = computed(getAdminName)
+const isReadOnly = computed(isReadOnlyAdmin)
 
 const logout = () => {
-  localStorage.removeItem('store_admin_token')
-  localStorage.removeItem('store_admin_name')
+  clearAdminSession()
   router.replace('/login')
 }
 </script>

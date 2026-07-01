@@ -12,7 +12,7 @@
           <el-button type="primary" :icon="Search" @click="load">查询</el-button>
           <el-button :icon="Refresh" @click="reset">重置</el-button>
         </div>
-        <el-button type="primary" :icon="Plus" @click="openDialog()">新增项目</el-button>
+        <el-button type="primary" :icon="Plus" :disabled="isReadOnly" @click="openDialog()">新增项目</el-button>
       </div>
       <el-table :data="list" border stripe>
         <el-table-column prop="id" label="ID" width="80" />
@@ -32,11 +32,12 @@
         <el-table-column label="操作" width="190" fixed="right">
           <template #default="{ row }">
             <div class="table-actions">
-              <el-button link type="primary" @click="openDialog(row)">编辑</el-button>
+              <el-button link type="primary" :disabled="isReadOnly" @click="openDialog(row)">编辑</el-button>
               <el-button
                 link
                 :type="row.status === 1 ? 'danger' : 'success'"
                 :icon="row.status === 1 ? Bottom : Top"
+                :disabled="isReadOnly"
                 @click="toggleStatus(row)"
               >
                 {{ row.status === 1 ? '下架' : '上架' }}
@@ -61,23 +62,29 @@
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submit">保存</el-button>
+        <el-button type="primary" :disabled="isReadOnly" @click="submit">保存</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Bottom, Plus, Refresh, Search, Top } from '@element-plus/icons-vue'
 import { ServiceItem, serviceItemApi } from '@/api/modules'
+import { isReadOnlyAdmin } from '@/utils/auth'
 
 const query = reactive({ page: 1, pageSize: 10, name: '', status: undefined as number | undefined })
 const list = ref<ServiceItem[]>([])
 const total = ref(0)
 const dialogVisible = ref(false)
 const form = reactive<ServiceItem>({ name: '', price: 0, duration: 60, description: '', status: 1 })
+const isReadOnly = computed(isReadOnlyAdmin)
+
+const warnReadOnly = () => {
+  ElMessage.warning('当前账号为只读账号，不能修改数据')
+}
 
 const load = async () => {
   const data = await serviceItemApi.page(query)
@@ -91,11 +98,19 @@ const reset = () => {
 }
 
 const openDialog = (row?: ServiceItem) => {
+  if (isReadOnly.value) {
+    warnReadOnly()
+    return
+  }
   Object.assign(form, row || { id: undefined, name: '', price: 0, duration: 60, description: '', status: 1 })
   dialogVisible.value = true
 }
 
 const submit = async () => {
+  if (isReadOnly.value) {
+    warnReadOnly()
+    return
+  }
   if (form.id) {
     await serviceItemApi.update(form)
   } else {
@@ -107,6 +122,10 @@ const submit = async () => {
 }
 
 const toggleStatus = async (row: ServiceItem) => {
+  if (isReadOnly.value) {
+    warnReadOnly()
+    return
+  }
   if (!row.id) return
   const nextStatus = row.status === 1 ? 0 : 1
   const actionText = nextStatus === 1 ? '上架' : '下架'
