@@ -2,7 +2,7 @@ package com.wkr.store_appointment.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.wkr.store_appointment.enums.PayStatusEnum;
+import com.wkr.store_appointment.enums.OrderStatusEnum;
 import com.wkr.store_appointment.mapper.AppointmentMapper;
 import com.wkr.store_appointment.mapper.CustomerMapper;
 import com.wkr.store_appointment.mapper.StatisticsMapper;
@@ -52,7 +52,7 @@ public class StatisticsServiceImpl implements StatisticsService {
                 Wrappers.lambdaQuery(OrderInfo.class)
                         .ge(OrderInfo::getCreateTime, beginTime)
                         .lt(OrderInfo::getCreateTime, endTime)));
-        statisticsOverviewVO.setTodayAmount(sumPaidAmount(beginTime, endTime));
+        statisticsOverviewVO.setTodayAmount(sumReceivedAmount(beginTime, endTime));
         return statisticsOverviewVO;
     }
 
@@ -67,7 +67,7 @@ public class StatisticsServiceImpl implements StatisticsService {
         for (int i = 0; i < 7; i++) {
             LocalDate date = beginDate.plusDays(i);
             dateList.add(date.toString());
-            amountList.add(sumPaidAmount(date.atStartOfDay(), date.plusDays(1).atStartOfDay()));
+            amountList.add(sumReceivedAmount(date.atStartOfDay(), date.plusDays(1).atStartOfDay()));
         }
 
         OrderAmountStatisticsVO orderAmountStatisticsVO = new OrderAmountStatisticsVO();
@@ -76,11 +76,11 @@ public class StatisticsServiceImpl implements StatisticsService {
         return orderAmountStatisticsVO;
     }
 
-    private BigDecimal sumPaidAmount(LocalDateTime beginTime, LocalDateTime endTime) {
+    private BigDecimal sumReceivedAmount(LocalDateTime beginTime, LocalDateTime endTime) {
 
         QueryWrapper<OrderInfo> queryWrapper = Wrappers.<OrderInfo>query()
-                .select("coalesce(sum(amount), 0)")
-                .eq("pay_status", PayStatusEnum.PAID.getCode())
+                .select("coalesce(sum(paid_amount), 0)")
+                .ne("order_status", OrderStatusEnum.CANCELED.getCode())
                 .ge("create_time", beginTime)
                 .lt("create_time", endTime);
         List<Object> values = statisticsMapper.selectObjs(queryWrapper);

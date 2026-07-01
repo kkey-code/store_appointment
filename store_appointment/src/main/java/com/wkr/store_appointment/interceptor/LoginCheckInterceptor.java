@@ -35,12 +35,15 @@ public class LoginCheckInterceptor implements HandlerInterceptor {
 
         try {
             Claims claims = JwtUtil.parseJWT(jwtProperties.getAdminSecretKey(), token);
-            Object empId = claims.get(JwtClaimsConstant.EMP_ID);
-            if (empId == null) {
+            Object currentId = claims.get(JwtClaimsConstant.EMP_ID);
+            if (currentId == null) {
+                currentId = claims.get(JwtClaimsConstant.USER_ID);
+            }
+            if (currentId == null) {
                 writeUnauthorized(response, "登录信息无效");
                 return false;
             }
-            BaseContext.setCurrentId(Long.valueOf(empId.toString()));
+            BaseContext.setCurrentId(Long.valueOf(currentId.toString()));
             return true;
         } catch (Exception ex) {
             writeUnauthorized(response, "登录已过期，请重新登录");

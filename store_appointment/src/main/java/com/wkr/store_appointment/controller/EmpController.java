@@ -43,7 +43,10 @@ public class EmpController {
 
         //登录成功后，生成jwt令牌
         Map<String, Object> claims = new HashMap<>();
-        claims.put(JwtClaimsConstant.EMP_ID, user.getId());
+        claims.put(JwtClaimsConstant.USER_ID, user.getId());
+        if (user.getEmployeeId() != null) {
+            claims.put(JwtClaimsConstant.EMP_ID, user.getEmployeeId());
+        }
         claims.put(JwtClaimsConstant.USERNAME, user.getUsername());
         claims.put(JwtClaimsConstant.ROLE, user.getRole());
         String token = JwtUtil.createJWT(
