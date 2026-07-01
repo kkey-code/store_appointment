@@ -85,7 +85,7 @@ store_appointment/
 
 ## 关键设计
 
-### MyBatis-Plus 升级
+### MyBatis-Plus 
 
 - `customer`、`appointment`、`order_info` 使用 `@TableLogic` 支持逻辑删除。
 - 单表 CRUD 和分页尽量使用 MyBatis-Plus 自动 SQL。
